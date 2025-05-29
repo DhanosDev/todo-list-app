@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { toast } from "react-hot-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useTasks, useTaskFilters } from "@/hooks/useTasks";
@@ -35,156 +35,177 @@ export default function TasksPage() {
   const [parentTaskForSubtask, setParentTaskForSubtask] = useState<Task | null>(
     null
   );
-  const [allTasks, setAllTasks] = useState<Task[]>([]);
+  const taskCounts = useMemo(
+    () => ({
+      total: tasks.length,
+      pending: tasks.filter((task) => task.status === "pending").length,
+      completed: tasks.filter((task) => task.status === "completed").length,
+    }),
+    [tasks]
+  );
+
+  const handleStatusToggle = useCallback(
+    async (taskId: string, status: "pending" | "completed") => {
+      try {
+        clearError();
+        const success = await toggleTaskStatus(taskId, status);
+
+        if (success) {
+          const statusText =
+            status === "completed" ? "completada" : "marcada como pendiente";
+          toast.success(`Tarea ${statusText}`);
+        }
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : "Error al cambiar estado";
+        toast.error(message);
+      }
+    },
+    [toggleTaskStatus, clearError]
+  );
+
+  const handleDeleteTask = useCallback(
+    async (taskId: string) => {
+      try {
+        clearError();
+        const success = await deleteTask(taskId);
+
+        if (success) {
+          toast.success("Tarea eliminada exitosamente");
+        }
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : "Error al eliminar tarea";
+        toast.error(message);
+      }
+    },
+    [deleteTask, clearError]
+  );
+
+  const handleEditTaskClick = useCallback((task: Task) => {
+    setSelectedTask(task);
+    setViewMode("edit");
+  }, []);
+
+  const handleAddSubtaskClick = useCallback(
+    (parentTaskId: Task) => {
+      const parentTask = tasks.find((task) => task._id === parentTaskId._id);
+      if (parentTask) {
+        setParentTaskForSubtask(parentTask);
+        setViewMode("create-subtask");
+      }
+    },
+    [tasks]
+  );
+
+  const handleFiltersChange = useCallback(
+    (newFilters: typeof filters) => {
+      setFilters(newFilters);
+    },
+    [setFilters]
+  );
+
+  const handleCreateTask = useCallback(
+    async (data: CreateTaskData) => {
+      try {
+        clearError();
+        const newTask = await createTask(data);
+
+        if (newTask) {
+          toast.success("Tarea creada exitosamente");
+          setViewMode("list");
+        }
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : "Error al crear tarea";
+        toast.error(message);
+      }
+    },
+    [createTask, clearError]
+  );
+
+  const handleEditTask = useCallback(
+    async (data: CreateTaskData) => {
+      if (!selectedTask) return;
+
+      try {
+        clearError();
+        const updatedTask = await updateTask(selectedTask._id, {
+          title: data.title,
+          description: data.description,
+        });
+
+        if (updatedTask) {
+          toast.success("Tarea actualizada exitosamente");
+          setViewMode("list");
+          setSelectedTask(null);
+        }
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : "Error al actualizar tarea";
+        toast.error(message);
+      }
+    },
+    [selectedTask, updateTask, clearError]
+  );
+
+  const handleCreateSubtask = useCallback(
+    async (data: CreateTaskData) => {
+      if (!parentTaskForSubtask) return;
+
+      try {
+        clearError();
+        const newSubtask = await createSubtask(parentTaskForSubtask._id, {
+          title: data.title,
+          description: data.description,
+        });
+
+        if (newSubtask) {
+          toast.success("Subtarea creada exitosamente");
+          setViewMode("list");
+          setParentTaskForSubtask(null);
+        }
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : "Error al crear subtarea";
+        toast.error(message);
+      }
+    },
+    [parentTaskForSubtask, createSubtask, clearError]
+  );
+
+  const handleCancelForm = useCallback(() => {
+    setViewMode("list");
+    setSelectedTask(null);
+    setParentTaskForSubtask(null);
+    clearError();
+  }, [clearError]);
+
+  const handleNewTaskClick = useCallback(() => {
+    setViewMode("create");
+  }, []);
+
+  const handleRefreshClick = useCallback(() => {
+    fetchTasks(filters);
+  }, [fetchTasks, filters]);
 
   useEffect(() => {
     fetchTasks(filters);
   }, [filters, fetchTasks]);
 
-  useEffect(() => {
-    const fetchAllTasksForCounts = async () => {
-      try {
-        const taskService = await import("@/services/taskService");
-        const allTasksData = await taskService.taskService.getTasks();
-        setAllTasks(allTasksData);
-      } catch (error) {
-        console.error("Error fetching all tasks for counts:", error);
-
-        setAllTasks(tasks);
-      }
-    };
-
-    if (!isLoading) {
-      fetchAllTasksForCounts();
+  const statusMessage = useMemo(() => {
+    if (taskCounts.pending > 0) {
+      return `tienes ${taskCounts.pending} tarea${
+        taskCounts.pending > 1 ? "s" : ""
+      } pendiente${taskCounts.pending > 1 ? "s" : ""}`;
     }
-  }, [tasks, isLoading]);
+    return "no tienes tareas pendientes";
+  }, [taskCounts.pending]);
 
-  const taskCounts = {
-    total: allTasks.length,
-    pending: allTasks.filter((task) => task.status === "pending").length,
-    completed: allTasks.filter((task) => task.status === "completed").length,
-  };
-
-  const handleCreateTask = async (data: CreateTaskData) => {
-    try {
-      clearError();
-      const newTask = await createTask(data);
-
-      if (newTask) {
-        toast.success("Tarea creada exitosamente");
-        setViewMode("list");
-      }
-    } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "Error al crear tarea";
-      toast.error(message);
-    }
-  };
-
-  const handleEditTask = async (data: CreateTaskData) => {
-    if (!selectedTask) return;
-
-    try {
-      clearError();
-      const updatedTask = await updateTask(selectedTask.id, {
-        title: data.title,
-        description: data.description,
-      });
-
-      if (updatedTask) {
-        toast.success("Tarea actualizada exitosamente");
-        setViewMode("list");
-        setSelectedTask(null);
-      }
-    } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "Error al actualizar tarea";
-      toast.error(message);
-    }
-  };
-
-  const handleCreateSubtask = async (data: CreateTaskData) => {
-    if (!parentTaskForSubtask) return;
-
-    try {
-      clearError();
-      const newSubtask = await createSubtask(parentTaskForSubtask.id, {
-        title: data.title,
-        description: data.description,
-      });
-
-      if (newSubtask) {
-        toast.success("Subtarea creada exitosamente");
-        setViewMode("list");
-        setParentTaskForSubtask(null);
-
-        fetchTasks(filters);
-      }
-    } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "Error al crear subtarea";
-      toast.error(message);
-    }
-  };
-
-  const handleStatusToggle = async (
-    taskId: string,
-    status: "pending" | "completed"
-  ) => {
-    try {
-      clearError();
-      const success = await toggleTaskStatus(taskId, status);
-
-      if (success) {
-        const statusText =
-          status === "completed" ? "completada" : "marcada como pendiente";
-        toast.success(`Tarea ${statusText}`);
-      }
-    } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "Error al cambiar estado";
-      toast.error(message);
-    }
-  };
-
-  const handleDeleteTask = async (taskId: string) => {
-    try {
-      clearError();
-      const success = await deleteTask(taskId);
-
-      if (success) {
-        toast.success("Tarea eliminada exitosamente");
-      }
-    } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "Error al eliminar tarea";
-      toast.error(message);
-    }
-  };
-
-  const handleEditTaskClick = (task: Task) => {
-    setSelectedTask(task);
-    setViewMode("edit");
-  };
-
-  const handleAddSubtaskClick = (parentTaskId: string) => {
-    const parentTask = tasks.find((task) => task.id === parentTaskId);
-    if (parentTask) {
-      setParentTaskForSubtask(parentTask);
-      setViewMode("create-subtask");
-    }
-  };
-
-  const handleCancelForm = () => {
-    setViewMode("list");
-    setSelectedTask(null);
-    setParentTaskForSubtask(null);
-    clearError();
-  };
-
-  const handleFiltersChange = (newFilters: typeof filters) => {
-    setFilters(newFilters);
-  };
+  const isAnyLoading = useMemo(
+    () => isLoading || isUpdating || isDeleting,
+    [isLoading, isUpdating, isDeleting]
+  );
 
   return (
     <div className="min-h-screen bg-background">
@@ -197,19 +218,14 @@ export default function TasksPage() {
                 Mis Tareas
               </h1>
               <p className="text-preset-5 text-text-secondary mt-1">
-                Hola {user?.name},{" "}
-                {taskCounts.pending > 0
-                  ? `tienes ${taskCounts.pending} tarea${
-                      taskCounts.pending > 1 ? "s" : ""
-                    } pendiente${taskCounts.pending > 1 ? "s" : ""}`
-                  : "no tienes tareas pendientes"}
+                Hola {user?.name}, {statusMessage}
               </p>
             </div>
 
             {viewMode === "list" && (
               <Button
                 variant="primary-large"
-                onClick={() => setViewMode("create")}
+                onClick={handleNewTaskClick}
                 disabled={isLoading}
               >
                 + Nueva Tarea
@@ -294,7 +310,7 @@ export default function TasksPage() {
                     {taskCounts.total > 0 && !isLoading && (
                       <Button
                         variant="secondary"
-                        onClick={() => fetchTasks(filters)}
+                        onClick={handleRefreshClick}
                         disabled={isLoading}
                       >
                         🔄 Actualizar
@@ -306,7 +322,7 @@ export default function TasksPage() {
                   <div className="lg:hidden">
                     <Button
                       variant="primary-small"
-                      onClick={() => setViewMode("create")}
+                      onClick={handleNewTaskClick}
                       disabled={isLoading}
                     >
                       + Nueva
@@ -317,7 +333,7 @@ export default function TasksPage() {
                 {/* Tasks List */}
                 <TaskList
                   tasks={tasks}
-                  isLoading={isLoading || isUpdating || isDeleting}
+                  isLoading={isAnyLoading}
                   error={error}
                   onStatusToggle={handleStatusToggle}
                   onEdit={handleEditTaskClick}
