@@ -94,15 +94,19 @@ class AuthService {
       const response = await api.get<{
         success: boolean;
         data: {
-          id: string;
-          name: string;
-          email: string;
-          createdAt: string;
+          user: {
+            id: string;
+            name: string;
+            email: string;
+            createdAt: string;
+            updatedAt: string;
+          };
         };
       }>("/auth/me");
 
       if (response.data.success) {
-        const user = response.data.data;
+        const user = response.data.data.user;
+
         tokenService.setUser(user);
         return user;
       } else {

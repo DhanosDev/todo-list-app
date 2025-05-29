@@ -2,10 +2,11 @@ export interface User {
   id: string;
   name: string;
   email: string;
+  createdAt: string;
 }
 
 export interface Task {
-  _id: string;
+  id: string;
   title: string;
   description: string;
   status: "pending" | "completed";
@@ -13,10 +14,14 @@ export interface Task {
   parentTask?: string;
   createdAt: string;
   updatedAt: string;
+  subtaskCount?: number;
+  pendingSubtasks?: number;
+  isSubtask?: boolean;
+  isParentTask?: boolean;
 }
 
 export interface Comment {
-  _id: string;
+  id: string;
   content: string;
   task: string;
   user: string;
