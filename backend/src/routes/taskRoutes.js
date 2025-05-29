@@ -1,47 +1,25 @@
 const express = require("express");
-const router = express.Router();
 const { body, param, query } = require("express-validator");
-
 const {
   getTasks,
-  getTaskById,
+  getTask,
   createTask,
   updateTask,
-  updateTaskStatus,
   deleteTask,
+  updateTaskStatus,
   getSubtasks,
   createSubtask,
 } = require("../controllers/taskController");
+const { protect } = require("../middleware/auth");
 
-// Validaciones comunes
-const taskValidation = [
-  body("title")
-    .trim()
-    .notEmpty()
-    .withMessage("Title is required")
-    .isLength({ max: 100 })
-    .withMessage("Title cannot exceed 100 characters"),
-  body("description")
-    .optional()
-    .trim()
-    .isLength({ max: 500 })
-    .withMessage("Description cannot exceed 500 characters"),
-];
+const router = express.Router();
 
-const mongoIdValidation = [
-  param("id").isMongoId().withMessage("Invalid task ID format"),
-];
-
-const statusValidation = [
-  body("status")
-    .isIn(["pending", "completed"])
-    .withMessage("Status must be either pending or completed"),
-];
+// Apply auth protection to ALL routes
+router.use(protect);
 
 // @route   GET /api/tasks
-// @desc    Get all tasks with optional filters
-// @access  Private (será en Fase 3)
-// Query params: ?status=pending|completed&includeSubtasks=true
+// @desc    Get all tasks for authenticated user
+// @access  Private
 router.get(
   "/",
   [
@@ -58,71 +36,114 @@ router.get(
 );
 
 // @route   GET /api/tasks/:id
-// @desc    Get single task by ID with subtasks
-// @access  Private (será en Fase 3)
-router.get("/:id", mongoIdValidation, getTaskById);
+// @desc    Get single task by ID
+// @access  Private
+router.get(
+  "/:id",
+  [param("id").isMongoId().withMessage("Invalid task ID format")],
+  getTask
+);
 
 // @route   POST /api/tasks
-// @desc    Create new task (can be main task or subtask)
-// @access  Private (será en Fase 3)
+// @desc    Create new task
+// @access  Private
 router.post(
   "/",
   [
-    ...taskValidation,
+    body("title")
+      .trim()
+      .isLength({ min: 1, max: 100 })
+      .withMessage(
+        "Title is required and must be between 1 and 100 characters"
+      ),
+    body("description")
+      .optional()
+      .trim()
+      .isLength({ max: 500 })
+      .withMessage("Description cannot exceed 500 characters"),
     body("parentTask")
       .optional()
       .isMongoId()
-      .withMessage("Parent task must be a valid ID"),
+      .withMessage("Invalid parent task ID format"),
   ],
   createTask
 );
 
 // @route   PUT /api/tasks/:id
-// @desc    Update task (title and description only)
-// @access  Private (será en Fase 3)
-router.put("/:id", [...mongoIdValidation, ...taskValidation], updateTask);
-
-// @route   PUT /api/tasks/:id/status
-// @desc    Update task status
-// @access  Private (será en Fase 3)
+// @desc    Update task
+// @access  Private
 router.put(
-  "/:id/status",
-  [...mongoIdValidation, ...statusValidation],
-  updateTaskStatus
+  "/:id",
+  [
+    param("id").isMongoId().withMessage("Invalid task ID format"),
+    body("title")
+      .optional()
+      .trim()
+      .isLength({ min: 1, max: 100 })
+      .withMessage("Title must be between 1 and 100 characters"),
+    body("description")
+      .optional()
+      .trim()
+      .isLength({ max: 500 })
+      .withMessage("Description cannot exceed 500 characters"),
+    body("status")
+      .optional()
+      .isIn(["pending", "completed"])
+      .withMessage("Status must be either pending or completed"),
+  ],
+  updateTask
 );
 
 // @route   DELETE /api/tasks/:id
-// @desc    Delete task (and subtasks if it's a parent)
-// @access  Private (será en Fase 3)
-router.delete("/:id", mongoIdValidation, deleteTask);
+// @desc    Delete task
+// @access  Private
+router.delete(
+  "/:id",
+  [param("id").isMongoId().withMessage("Invalid task ID format")],
+  deleteTask
+);
+
+// @route   PUT /api/tasks/:id/status
+// @desc    Update task status
+// @access  Private
+router.put(
+  "/:id/status",
+  [
+    param("id").isMongoId().withMessage("Invalid task ID format"),
+    body("status")
+      .isIn(["pending", "completed"])
+      .withMessage("Status must be either pending or completed"),
+  ],
+  updateTaskStatus
+);
 
 // @route   GET /api/tasks/:id/subtasks
-// @desc    Get all subtasks of a task
-// @access  Private (será en Fase 3)
+// @desc    Get subtasks for a specific task
+// @access  Private
 router.get(
   "/:id/subtasks",
-  [param("id").isMongoId().withMessage("Invalid parent task ID format")],
+  [param("id").isMongoId().withMessage("Invalid task ID format")],
   getSubtasks
 );
 
 // @route   POST /api/tasks/:id/subtasks
 // @desc    Create subtask for a specific task
-// @access  Private (será en Fase 3)
+// @access  Private
 router.post(
   "/:id/subtasks",
   [
     param("id").isMongoId().withMessage("Invalid parent task ID format"),
     body("title")
       .trim()
-      .notEmpty()
-      .withMessage("Subtask title is required")
-      .isLength({ max: 100 })
-      .withMessage("Subtask title cannot exceed 100 characters"),
+      .isLength({ min: 1, max: 100 })
+      .withMessage(
+        "Title is required and must be between 1 and 100 characters"
+      ),
     body("description")
       .optional()
       .trim()
       .isLength({ max: 500 })
-      .withMessage("Subtask description cannot exceed 500 characters"),
+      .withMessage("Description cannot exceed 500 characters"),
   ],
   createSubtask
 );

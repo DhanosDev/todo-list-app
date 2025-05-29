@@ -1,76 +1,99 @@
-const Task = require("../models/Task");
 const { validationResult } = require("express-validator");
+const Task = require("../models/Task");
 
-// TEMP_USER_ID para testing hasta implementar JWT en Fase 3
-const TEMP_USER_ID = "507f1f77bcf86cd799439011";
-
-// @desc    Get all tasks with optional status filter
-// @route   GET /api/tasks?status=pending|completed
-// @access  Private (será en Fase 3)
-exports.getTasks = async (req, res) => {
+// @desc    Get all tasks for authenticated user
+// @route   GET /api/tasks
+// @access  Private
+const getTasks = async (req, res) => {
   try {
-    const filter = { user: TEMP_USER_ID };
-
-    // Filtrar por status si se proporciona
-    if (
-      req.query.status &&
-      ["pending", "completed"].includes(req.query.status)
-    ) {
-      filter.status = req.query.status;
+    // Check for validation errors
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        message: "Validation failed",
+        errors: errors.array(),
+      });
     }
 
-    // Solo traer tareas padre (no subtareas) por defecto
-    if (!req.query.includeSubtasks) {
-      filter.parentTask = null;
+    const { status, includeSubtasks } = req.query;
+    const userId = req.user._id; // From auth middleware
+
+    // Build query
+    let query = { user: userId };
+
+    // Filter by status if provided
+    if (status) {
+      query.status = status;
     }
 
-    const tasks = await Task.find(filter)
-      .populate("parentTask", "title")
-      .sort({ createdAt: -1 });
+    // Filter subtasks if specified
+    if (includeSubtasks === "false") {
+      query.parentTask = { $exists: false };
+    }
 
-    // Para cada tarea padre, incluir conteo de subtareas
-    const tasksWithSubtaskCount = await Promise.all(
-      tasks.map(async (task) => {
-        const taskObj = task.toJSON();
-        if (!task.parentTask) {
-          const subtaskCount = await Task.countDocuments({
-            parentTask: task._id,
-          });
-          const pendingSubtasks = await Task.countDocuments({
-            parentTask: task._id,
-            status: "pending",
-          });
-          taskObj.subtaskCount = subtaskCount;
-          taskObj.pendingSubtasks = pendingSubtasks;
-        }
-        return taskObj;
-      })
-    );
+    // Get tasks with subtask counts
+    const tasks = await Task.aggregate([
+      { $match: query },
+      {
+        $lookup: {
+          from: "tasks",
+          localField: "_id",
+          foreignField: "parentTask",
+          as: "subtasks",
+        },
+      },
+      {
+        $addFields: {
+          subtaskCount: { $size: "$subtasks" },
+          pendingSubtasks: {
+            $size: {
+              $filter: {
+                input: "$subtasks",
+                cond: { $eq: ["$$this.status", "pending"] },
+              },
+            },
+          },
+          isParentTask: { $gt: [{ $size: "$subtasks" }, 0] },
+          isSubtask: { $ne: ["$parentTask", null] },
+        },
+      },
+      { $sort: { createdAt: -1 } },
+    ]);
 
-    res.json({
+    res.status(200).json({
       success: true,
       count: tasks.length,
-      data: tasksWithSubtaskCount,
+      data: tasks,
     });
   } catch (error) {
-    console.error(error);
+    console.error("Get tasks error:", error);
     res.status(500).json({
       success: false,
-      message: "Server Error",
-      error: error.message,
+      message: "Server error retrieving tasks",
     });
   }
 };
 
-// @desc    Get single task by ID with subtasks
+// @desc    Get single task
 // @route   GET /api/tasks/:id
-// @access  Private (será en Fase 3)
-exports.getTaskById = async (req, res) => {
+// @access  Private
+const getTask = async (req, res) => {
   try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        message: "Validation failed",
+        errors: errors.array(),
+      });
+    }
+
+    const userId = req.user._id;
     const task = await Task.findOne({
       _id: req.params.id,
-      user: TEMP_USER_ID,
-    }).populate("parentTask", "title");
+      user: userId,
+    }).populate("user", "name email");
 
     if (!task) {
       return res.status(404).json({
@@ -79,73 +102,80 @@ exports.getTaskById = async (req, res) => {
       });
     }
 
-    // Si es tarea padre, incluir subtareas
-    let subtasks = [];
-    if (!task.parentTask) {
-      subtasks = await Task.find({ parentTask: task._id }).sort({
-        createdAt: -1,
-      });
-    }
+    // Get subtasks if this is a parent task
+    const subtasks = await Task.find({
+      parentTask: task._id,
+      user: userId,
+    }).sort({ createdAt: 1 });
 
-    res.json({
+    res.status(200).json({
       success: true,
       data: {
-        ...task.toJSON(),
-        subtasks: subtasks,
+        ...task.toObject(),
+        subtasks,
+        subtaskCount: subtasks.length,
+        pendingSubtasks: subtasks.filter((st) => st.status === "pending")
+          .length,
       },
     });
   } catch (error) {
-    console.error(error);
+    console.error("Get task error:", error);
     res.status(500).json({
       success: false,
-      message: "Server Error",
-      error: error.message,
+      message: "Server error retrieving task",
     });
   }
 };
 
 // @desc    Create new task
 // @route   POST /api/tasks
-// @access  Private (será en Fase 3)
-exports.createTask = async (req, res) => {
+// @access  Private
+const createTask = async (req, res) => {
   try {
-    // Validar errores de express-validator
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({
         success: false,
-        message: "Validation Error",
+        message: "Validation failed",
         errors: errors.array(),
       });
     }
 
     const { title, description, parentTask } = req.body;
+    const userId = req.user._id;
 
-    // Crear objeto de tarea
-    const taskData = {
-      title,
-      description: description || "",
-      user: TEMP_USER_ID,
-    };
-
-    // Si es subtarea, validar que parent task existe
+    // If creating a subtask, verify parent task exists and belongs to user
     if (parentTask) {
-      const parentExists = await Task.findOne({
+      const parent = await Task.findOne({
         _id: parentTask,
-        user: TEMP_USER_ID,
+        user: userId,
       });
 
-      if (!parentExists) {
-        return res.status(400).json({
+      if (!parent) {
+        return res.status(404).json({
           success: false,
           message: "Parent task not found",
         });
       }
 
-      taskData.parentTask = parentTask;
+      // Check if parent task is already a subtask (no nested subtasks)
+      if (parent.parentTask) {
+        return res.status(400).json({
+          success: false,
+          message: "Cannot create subtask of a subtask",
+        });
+      }
     }
 
-    const task = await Task.create(taskData);
+    const task = await Task.create({
+      title,
+      description,
+      user: userId,
+      parentTask: parentTask || undefined,
+    });
+
+    // Populate user info for response
+    await task.populate("user", "name email");
 
     res.status(201).json({
       success: true,
@@ -155,33 +185,35 @@ exports.createTask = async (req, res) => {
       data: task,
     });
   } catch (error) {
-    console.error(error);
+    console.error("Create task error:", error);
     res.status(500).json({
       success: false,
-      message: "Server Error",
-      error: error.message,
+      message: "Server error creating task",
     });
   }
 };
 
 // @desc    Update task
 // @route   PUT /api/tasks/:id
-// @access  Private (será en Fase 3)
-exports.updateTask = async (req, res) => {
+// @access  Private
+const updateTask = async (req, res) => {
   try {
-    // Validar errores de express-validator
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({
         success: false,
-        message: "Validation Error",
+        message: "Validation failed",
         errors: errors.array(),
       });
     }
 
+    const userId = req.user._id;
+    const updates = req.body;
+
+    // Find task and verify ownership
     const task = await Task.findOne({
       _id: req.params.id,
-      user: TEMP_USER_ID,
+      user: userId,
     });
 
     if (!task) {
@@ -191,46 +223,101 @@ exports.updateTask = async (req, res) => {
       });
     }
 
-    const { title, description } = req.body;
+    // If trying to update status, use the specific status endpoint logic
+    if (updates.status && updates.status !== task.status) {
+      if (updates.status === "completed" && !task.parentTask) {
+        const canComplete = await task.canComplete();
+        if (!canComplete) {
+          return res.status(400).json({
+            success: false,
+            message: "Cannot complete task while subtasks are pending",
+          });
+        }
+      }
+    }
 
-    // Actualizar campos permitidos
-    if (title) task.title = title;
-    if (description !== undefined) task.description = description;
-
+    // Update task
+    Object.assign(task, updates);
     await task.save();
+    await task.populate("user", "name email");
 
-    res.json({
+    res.status(200).json({
       success: true,
       message: "Task updated successfully",
       data: task,
     });
   } catch (error) {
-    console.error(error);
+    console.error("Update task error:", error);
     res.status(500).json({
       success: false,
-      message: "Server Error",
-      error: error.message,
+      message: "Server error updating task",
+    });
+  }
+};
+
+// @desc    Delete task
+// @route   DELETE /api/tasks/:id
+// @access  Private
+const deleteTask = async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        message: "Validation failed",
+        errors: errors.array(),
+      });
+    }
+
+    const userId = req.user.id;
+    const task = await Task.findOne({
+      _id: req.params.id,
+      user: userId,
+    });
+
+    if (!task) {
+      return res.status(404).json({
+        success: false,
+        message: "Task not found",
+      });
+    }
+
+    // Delete task (middleware will handle subtask deletion)
+    await Task.findByIdAndDelete(req.params.id);
+
+    res.status(200).json({
+      success: true,
+      message: "Task deleted successfully",
+    });
+  } catch (error) {
+    console.error("Delete task error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error deleting task",
     });
   }
 };
 
 // @desc    Update task status
 // @route   PUT /api/tasks/:id/status
-// @access  Private (será en Fase 3)
-exports.updateTaskStatus = async (req, res) => {
+// @access  Private
+const updateTaskStatus = async (req, res) => {
   try {
-    const { status } = req.body;
-
-    if (!["pending", "completed"].includes(status)) {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
       return res.status(400).json({
         success: false,
-        message: "Invalid status. Must be pending or completed",
+        message: "Validation failed",
+        errors: errors.array(),
       });
     }
 
+    const { status } = req.body;
+    const userId = req.user.id;
+
     const task = await Task.findOne({
       _id: req.params.id,
-      user: TEMP_USER_ID,
+      user: userId,
     });
 
     if (!task) {
@@ -240,14 +327,13 @@ exports.updateTaskStatus = async (req, res) => {
       });
     }
 
-    // Si es tarea padre y se quiere completar, verificar subtareas
+    // Check if parent task can be completed
     if (status === "completed" && !task.parentTask) {
       const canComplete = await task.canComplete();
       if (!canComplete) {
         return res.status(400).json({
           success: false,
-          message:
-            "Cannot complete task with pending subtasks. Complete all subtasks first.",
+          message: "Cannot complete task while subtasks are pending",
         });
       }
     }
@@ -255,69 +341,40 @@ exports.updateTaskStatus = async (req, res) => {
     task.status = status;
     await task.save();
 
-    res.json({
+    res.status(200).json({
       success: true,
       message: `Task marked as ${status}`,
       data: task,
     });
   } catch (error) {
-    console.error(error);
+    console.error("Update task status error:", error);
     res.status(500).json({
       success: false,
-      message: "Server Error",
-      error: error.message,
+      message: "Server error updating task status",
     });
   }
 };
 
-// @desc    Delete task
-// @route   DELETE /api/tasks/:id
-// @access  Private (será en Fase 3)
-exports.deleteTask = async (req, res) => {
+// @desc    Get subtasks for a task
+// @route   GET /api/tasks/:id/subtasks
+// @access  Private
+const getSubtasks = async (req, res) => {
   try {
-    const task = await Task.findOne({
-      _id: req.params.id,
-      user: TEMP_USER_ID,
-    });
-
-    if (!task) {
-      return res.status(404).json({
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
         success: false,
-        message: "Task not found",
+        message: "Validation failed",
+        errors: errors.array(),
       });
     }
 
-    // Si es tarea padre, también eliminar subtareas (manejado por middleware del modelo)
-    await Task.findOneAndDelete({
-      _id: req.params.id,
-      user: TEMP_USER_ID,
-    });
+    const userId = req.user.id;
 
-    res.json({
-      success: true,
-      message: task.parentTask
-        ? "Subtask deleted successfully"
-        : "Task and all subtasks deleted successfully",
-    });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({
-      success: false,
-      message: "Server Error",
-      error: error.message,
-    });
-  }
-};
-
-// @desc    Get subtasks of a task
-// @route   GET /api/tasks/:id/subtasks
-// @access  Private (será en Fase 3)
-exports.getSubtasks = async (req, res) => {
-  try {
-    // Verificar que la tarea padre existe
+    // Verify parent task exists and belongs to user
     const parentTask = await Task.findOne({
       _id: req.params.id,
-      user: TEMP_USER_ID,
+      user: userId,
     });
 
     if (!parentTask) {
@@ -329,47 +386,45 @@ exports.getSubtasks = async (req, res) => {
 
     const subtasks = await Task.find({
       parentTask: req.params.id,
-      user: TEMP_USER_ID,
-    }).sort({ createdAt: -1 });
+      user: userId,
+    }).sort({ createdAt: 1 });
 
-    res.json({
+    res.status(200).json({
       success: true,
       count: subtasks.length,
-      parentTask: {
-        id: parentTask._id,
-        title: parentTask.title,
-      },
       data: subtasks,
     });
   } catch (error) {
-    console.error(error);
+    console.error("Get subtasks error:", error);
     res.status(500).json({
       success: false,
-      message: "Server Error",
-      error: error.message,
+      message: "Server error retrieving subtasks",
     });
   }
 };
 
 // @desc    Create subtask
 // @route   POST /api/tasks/:id/subtasks
-// @access  Private (será en Fase 3)
-exports.createSubtask = async (req, res) => {
+// @access  Private
+const createSubtask = async (req, res) => {
   try {
-    // Validar errores de express-validator
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({
         success: false,
-        message: "Validation Error",
+        message: "Validation failed",
         errors: errors.array(),
       });
     }
 
-    // Verificar que la tarea padre existe
+    const { title, description } = req.body;
+    const userId = req.user.id;
+    const parentTaskId = req.params.id;
+
+    // Verify parent task exists and belongs to user
     const parentTask = await Task.findOne({
-      _id: req.params.id,
-      user: TEMP_USER_ID,
+      _id: parentTaskId,
+      user: userId,
     });
 
     if (!parentTask) {
@@ -379,23 +434,22 @@ exports.createSubtask = async (req, res) => {
       });
     }
 
-    // Verificar que la tarea padre no es una subtarea
+    // Check if parent is already a subtask
     if (parentTask.parentTask) {
       return res.status(400).json({
         success: false,
-        message:
-          "Cannot create subtask of a subtask. Only main tasks can have subtasks.",
+        message: "Cannot create subtask of a subtask",
       });
     }
 
-    const { title, description } = req.body;
-
     const subtask = await Task.create({
       title,
-      description: description || "",
-      user: TEMP_USER_ID,
-      parentTask: req.params.id,
+      description,
+      user: userId,
+      parentTask: parentTaskId,
     });
+
+    await subtask.populate("user", "name email");
 
     res.status(201).json({
       success: true,
@@ -403,11 +457,21 @@ exports.createSubtask = async (req, res) => {
       data: subtask,
     });
   } catch (error) {
-    console.error(error);
+    console.error("Create subtask error:", error);
     res.status(500).json({
       success: false,
-      message: "Server Error",
-      error: error.message,
+      message: "Server error creating subtask",
     });
   }
+};
+
+module.exports = {
+  getTasks,
+  getTask,
+  createTask,
+  updateTask,
+  deleteTask,
+  updateTaskStatus,
+  getSubtasks,
+  createSubtask,
 };
