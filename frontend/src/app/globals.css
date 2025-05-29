@@ -1,9 +1,10 @@
 @import "tailwindcss";
+@source inline("btn-primary-large btn-primary-small btn-secondary btn-destructive btn-disabled btn-full btn-focus");
 
 /* Importación de archivos base */
+@import "../styles/base/reset.css";
 @import "../styles/base/variables.css";
 @import "../styles/base/typography.css";
-@import "../styles/base/reset.css";
 
 /* Importación de componentes */
 @import "../styles/components/buttons.css";

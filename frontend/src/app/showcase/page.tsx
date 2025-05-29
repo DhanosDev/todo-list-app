@@ -12,7 +12,6 @@ import { Card, TaskCard, FormCard } from "@/components/ui/Card";
 import { Input, Textarea, Select } from "@/components/ui/Input";
 import { Header } from "@/components/layout/Header";
 import { Sidebar } from "@/components/layout/Sidebar";
-import { MainLayout } from "@/components/layout/MainLayout";
 
 export default function ComponentsShowcase() {
   const [modalOpen, setModalOpen] = useState(false);
@@ -120,7 +119,6 @@ export default function ComponentsShowcase() {
               <Button variant="secondary">Secondary</Button>
               <Button variant="destructive">Destructive</Button>
             </div>
-
             <div className="flex flex-wrap gap-4">
               <Button variant="primary-small" disabled>
                 Disabled

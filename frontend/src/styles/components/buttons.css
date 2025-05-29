@@ -3,9 +3,6 @@
 /* ================================================== */
 
 @utility btn-primary-large {
-  /* Hereda tipografía de heading-m */
-  @apply text-preset-3;
-
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -17,6 +14,12 @@
   cursor: pointer;
   border: none;
   transition: background-color 150ms;
+}
+
+@utility test-button {
+  background-color: red !important;
+  color: white !important;
+  padding: 20px !important;
 }
 
 .btn-primary-large:hover {
@@ -98,7 +101,6 @@
 
 @utility btn-focus {
   outline: none;
-  box-shadow:
-    0 0 0 2px var(--color-background),
+  box-shadow: 0 0 0 2px var(--color-background),
     0 0 0 4px var(--color-main-purple);
 }
