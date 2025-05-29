@@ -1,0 +1,53 @@
+@utility input-base {
+  @apply h-10 px-4 w-full rounded border outline-none;
+  @apply text-preset-5 placeholder:text-medium-grey;
+  @apply text-text-primary bg-surface; /* Usar la variable semántica */
+  @apply border-[#828FA3];
+  @apply transition-all duration-150;
+}
+
+@utility input-focus {
+  @apply focus:border-main-purple focus:border-2;
+}
+
+@utility input-error {
+  @apply border-red border-2;
+}
+
+@utility textarea-base {
+  @apply min-h-[80px] p-4 w-full rounded border outline-none;
+  @apply text-preset-5 placeholder:text-medium-grey;
+  @apply border-[#828FA3] resize-y;
+  @apply transition-all duration-150;
+}
+
+@utility textarea-focus {
+  @apply focus:border-main-purple focus:border-2;
+}
+
+@utility textarea-error {
+  @apply border-red border-2;
+}
+
+@utility form-label {
+  @apply text-preset-6 mb-2 text-medium-grey;
+}
+
+@utility error-message {
+  @apply absolute right-4 text-red text-preset-5;
+}
+
+@utility dropdown-menu {
+  @apply absolute left-0 right-0 z-10 mt-[7px] rounded border shadow-md;
+
+  background-color: var(--color-surface);
+  border-color: var(--color-border, rgba(130, 143, 163, 0.25));
+}
+
+@utility dropdown-option {
+  @apply px-4 py-2 hover:bg-[#635FC710] cursor-pointer;
+}
+
+@utility dropdown-option-selected {
+  @apply text-main-purple;
+}

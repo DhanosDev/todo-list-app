@@ -1,0 +1,104 @@
+/* ================================================== */
+/* BOTONES QUE HEREDAN PRESETS TIPOGRÁFICOS           */
+/* ================================================== */
+
+@utility btn-primary-large {
+  /* Hereda tipografía de heading-m */
+  @apply text-preset-3;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 48px;
+  padding: 0 24px;
+  background-color: var(--color-main-purple);
+  color: var(--color-white);
+  border-radius: 24px;
+  cursor: pointer;
+  border: none;
+  transition: background-color 150ms;
+}
+
+.btn-primary-large:hover {
+  background-color: var(--color-main-purple-hover);
+}
+
+@utility btn-primary-small {
+  /* Hereda tipografía de body-m */
+  @apply text-preset-6;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 40px;
+  padding: 0 24px;
+  background-color: var(--color-main-purple);
+  color: var(--color-white);
+  border-radius: 20px;
+  cursor: pointer;
+  border: none;
+  transition: background-color 150ms;
+}
+
+.btn-primary-small:hover {
+  background-color: var(--color-main-purple-hover);
+}
+
+@utility btn-secondary {
+  /* Hereda tipografía de body-m */
+  @apply text-preset-6;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 40px;
+  padding: 0 24px;
+  background-color: rgba(99, 95, 199, 0.1);
+  color: var(--color-main-purple);
+  border-radius: 24px;
+  cursor: pointer;
+  border: none;
+  transition: background-color 150ms;
+}
+
+.btn-secondary:hover {
+  background-color: rgba(99, 95, 199, 0.25);
+}
+
+@utility btn-destructive {
+  /* Hereda tipografía de body-m */
+  @apply text-preset-6;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 40px;
+  padding: 0 24px;
+  background-color: var(--color-red);
+  color: var(--color-white);
+  border-radius: 24px;
+  cursor: pointer;
+  border: none;
+  transition: background-color 150ms;
+}
+
+.btn-destructive:hover {
+  background-color: var(--color-red-hover);
+}
+
+@utility btn-disabled {
+  opacity: 0.25;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+@utility btn-full {
+  width: 100%;
+}
+
+@utility btn-focus {
+  outline: none;
+  box-shadow:
+    0 0 0 2px var(--color-background),
+    0 0 0 4px var(--color-main-purple);
+}
