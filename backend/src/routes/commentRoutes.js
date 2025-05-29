@@ -19,7 +19,7 @@ router.use(protect);
 // @desc    Get all comments for a specific task
 // @access  Private
 router.get(
-  "/:taskId/comments",
+  "/tasks/:taskId/comments",
   [param("taskId").isMongoId().withMessage("Invalid task ID format")],
   getTaskComments
 );
@@ -28,7 +28,7 @@ router.get(
 // @desc    Create new comment for a task
 // @access  Private
 router.post(
-  "/:taskId/comments",
+  "/tasks/:taskId/comments",
   [
     param("taskId").isMongoId().withMessage("Invalid task ID format"),
     body("content")
@@ -45,7 +45,7 @@ router.post(
 // @desc    Get comment count for a specific task
 // @access  Private
 router.get(
-  "/:taskId/comments/count",
+  "/tasks/:taskId/comments/count",
   [param("taskId").isMongoId().withMessage("Invalid task ID format")],
   getCommentCount
 );

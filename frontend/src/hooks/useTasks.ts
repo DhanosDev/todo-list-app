@@ -175,6 +175,9 @@ export function useTasks(initialFilters?: TaskFilters): UseTasksReturn {
       taskId: string,
       status: "pending" | "completed"
     ): Promise<boolean> => {
+      const task = state.tasks.find((t) => t._id === taskId);
+      const isSubtask = !!task?.parentTask;
+
       try {
         setState((prev) => ({ ...prev, isUpdating: true, error: null }));
 
@@ -188,6 +191,12 @@ export function useTasks(initialFilters?: TaskFilters): UseTasksReturn {
           isUpdating: false,
         }));
 
+        if (isSubtask) {
+          setTimeout(() => {
+            refreshTasks();
+          }, 100);
+        }
+
         return true;
       } catch (err) {
         const errorMessage =
@@ -200,7 +209,7 @@ export function useTasks(initialFilters?: TaskFilters): UseTasksReturn {
         return false;
       }
     },
-    []
+    [state.tasks, refreshTasks]
   );
 
   const createSubtask = useCallback(
@@ -222,6 +231,10 @@ export function useTasks(initialFilters?: TaskFilters): UseTasksReturn {
           isCreating: false,
         }));
 
+        setTimeout(() => {
+          refreshTasks();
+        }, 100);
+
         return newSubtask;
       } catch (err) {
         const errorMessage =
@@ -234,7 +247,7 @@ export function useTasks(initialFilters?: TaskFilters): UseTasksReturn {
         return null;
       }
     },
-    []
+    [refreshTasks]
   );
 
   const getTaskById = useCallback(
