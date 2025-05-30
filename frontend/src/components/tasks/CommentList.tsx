@@ -155,9 +155,9 @@ function CommentItem({
             isLoading={isUpdating}
           />
         ) : (
-          <div className="text-gray-700 text-sm whitespace-pre-wrap">
+          <p className="text-gray-700 break-words overflow-wrap-anywhere">
             {comment.content}
-          </div>
+          </p>
         )}
 
         {/* Delete Confirmation */}

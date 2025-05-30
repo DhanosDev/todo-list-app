@@ -4,9 +4,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import Link from "next/link";
 
 export default function Home() {
-  const { user, loading, logout, isAuthenticated } = useAuth();
+  const { user, isLoading, logout, isAuthenticated } = useAuth();
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-xl">Loading...</div>

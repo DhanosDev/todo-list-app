@@ -16,6 +16,7 @@ export default function TasksPage() {
   const { filters, setFilters } = useTaskFilters();
   const {
     tasks,
+    allTasks,
     isLoading,
     isCreating,
     isUpdating,
@@ -37,11 +38,11 @@ export default function TasksPage() {
   );
   const taskCounts = useMemo(
     () => ({
-      total: tasks.length,
-      pending: tasks.filter((task) => task.status === "pending").length,
-      completed: tasks.filter((task) => task.status === "completed").length,
+      total: allTasks.length,
+      pending: allTasks.filter((task) => task.status === "pending").length,
+      completed: allTasks.filter((task) => task.status === "completed").length,
     }),
-    [tasks]
+    [allTasks]
   );
 
   const handleStatusToggle = useCallback(
@@ -88,8 +89,9 @@ export default function TasksPage() {
   }, []);
 
   const handleAddSubtaskClick = useCallback(
-    (parentTaskId: Task) => {
-      const parentTask = tasks.find((task) => task._id === parentTaskId._id);
+    (parentTaskId: string) => {
+      console.log("Adding subtask for parent task:", parentTaskId);
+      const parentTask = tasks.find((task) => task._id === parentTaskId);
       if (parentTask) {
         setParentTaskForSubtask(parentTask);
         setViewMode("create-subtask");

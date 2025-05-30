@@ -9,13 +9,13 @@ import { Task } from "@/types";
 
 interface UseTasksState {
   tasks: Task[];
+  allTasks: Task[];
   isLoading: boolean;
   isCreating: boolean;
   isUpdating: boolean;
   isDeleting: boolean;
   error: string | null;
 }
-
 interface UseTasksActions {
   fetchTasks: (filters?: TaskFilters) => Promise<void>;
   refreshTasks: () => Promise<void>;
@@ -45,6 +45,7 @@ export type UseTasksReturn = UseTasksState & UseTasksActions;
 export function useTasks(initialFilters?: TaskFilters): UseTasksReturn {
   const [state, setState] = useState<UseTasksState>({
     tasks: [],
+    allTasks: [],
     isLoading: false,
     isCreating: false,
     isUpdating: false,
@@ -65,11 +66,24 @@ export function useTasks(initialFilters?: TaskFilters): UseTasksReturn {
       setState((prev) => ({ ...prev, isLoading: true, error: null }));
       setCurrentFilters(filters);
 
-      const tasks = await taskService.getTasks(filters);
+      const allTasksFromAPI = await taskService.getTasks();
+
+      let filteredTasks = allTasksFromAPI;
+
+      if (filters?.status) {
+        filteredTasks = filteredTasks.filter(
+          (task) => task.status === filters.status
+        );
+      }
+
+      if (filters?.includeSubtasks === false) {
+        filteredTasks = filteredTasks.filter((task) => !task.parentTask);
+      }
 
       setState((prev) => ({
         ...prev,
-        tasks,
+        allTasks: allTasksFromAPI,
+        tasks: filteredTasks,
         isLoading: false,
       }));
     } catch (err) {
@@ -97,6 +111,7 @@ export function useTasks(initialFilters?: TaskFilters): UseTasksReturn {
         setState((prev) => ({
           ...prev,
           tasks: [newTask, ...prev.tasks],
+          allTasks: [newTask, ...prev.allTasks],
           isCreating: false,
         }));
 
@@ -263,7 +278,33 @@ export function useTasks(initialFilters?: TaskFilters): UseTasksReturn {
 
         setState((prev) => ({
           ...prev,
-          tasks: [newSubtask, ...prev.tasks],
+          tasks: [
+            newSubtask,
+            ...prev.tasks.map((task) => {
+              if (task._id === parentTaskId) {
+                return {
+                  ...task,
+                  subtaskCount: (task.subtaskCount || 0) + 1,
+                  pendingSubtasks: (task.pendingSubtasks || 0) + 1,
+                };
+              }
+              return task;
+            }),
+          ],
+
+          allTasks: [
+            newSubtask,
+            ...prev.allTasks.map((task) => {
+              if (task._id === parentTaskId) {
+                return {
+                  ...task,
+                  subtaskCount: (task.subtaskCount || 0) + 1,
+                  pendingSubtasks: (task.pendingSubtasks || 0) + 1,
+                };
+              }
+              return task;
+            }),
+          ],
           isCreating: false,
         }));
 
@@ -279,7 +320,7 @@ export function useTasks(initialFilters?: TaskFilters): UseTasksReturn {
         return null;
       }
     },
-    [refreshTasks]
+    []
   );
 
   const getTaskById = useCallback(
@@ -317,7 +358,11 @@ export function useTasks(initialFilters?: TaskFilters): UseTasksReturn {
   );
 
   useEffect(() => {
-    fetchTasks(initialFilters);
+    if (initialFilters) {
+      fetchTasks(initialFilters);
+    } else {
+      fetchTasks();
+    }
   }, []);
 
   return returnValue;

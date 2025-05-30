@@ -8,11 +8,12 @@ import { CommentSection } from "./CommentSection";
 
 interface TaskCardProps {
   task: Task;
-  onStatusToggle: (taskId: string, status: "pending" | "completed") => void;
-  onEdit: (task: Task) => void;
-  onDelete: (taskId: string) => void;
-  onAddSubtask: (parentTask: Task) => void;
+  onStatusToggle?: (taskId: string, status: "pending" | "completed") => void;
+  onEdit?: (task: Task) => void;
+  onDelete?: (taskId: string) => void;
+  onAddSubtask?: (parentTaskId: string) => void;
   isLoading?: boolean;
+  showSubtasks?: boolean;
 }
 
 export const TaskCard = memo(
@@ -42,12 +43,12 @@ export const TaskCard = memo(
     const handleStatusToggle = useCallback(() => {
       if (isLoading) return;
       const newStatus = task.status === "pending" ? "completed" : "pending";
-      onStatusToggle(task._id, newStatus);
+      onStatusToggle?.(task._id, newStatus);
     }, [isLoading, task.status, task._id, onStatusToggle]);
 
     const handleEdit = useCallback(() => {
       if (isLoading) return;
-      onEdit(task);
+      onEdit?.(task);
     }, [isLoading, task, onEdit]);
 
     const handleDelete = useCallback(() => {
@@ -56,13 +57,13 @@ export const TaskCard = memo(
     }, [isLoading]);
 
     const handleConfirmDelete = useCallback(() => {
-      onDelete(task._id);
+      onDelete?.(task._id);
       setShowDeleteModal(false);
     }, [task._id, onDelete]);
 
     const handleAddSubtask = useCallback(() => {
       if (isLoading) return;
-      onAddSubtask(task);
+      onAddSubtask?.(task._id);
     }, [isLoading, task, onAddSubtask]);
 
     const handleCommentsClick = useCallback(() => {
@@ -480,24 +481,46 @@ export const TaskCard = memo(
         >
           <div className="space-y-3">
             <p className="text-gray-700">
-              ¿Estás seguro de que quieres eliminar esta tarea?
+              ¿Estás seguro que deseas eliminar la tarea &quot;
+              <strong>{task.title}</strong>&quot;?
             </p>
-            <div className="bg-gray-50 rounded p-3">
-              <p className="font-medium text-gray-900">{task.title}</p>
-              {task.description && (
-                <p className="text-sm text-gray-600 mt-1">{task.description}</p>
-              )}
-            </div>
-            {hasSubtasks && (
-              <div className="bg-yellow-50 border border-yellow-200 rounded p-3">
-                <p className="text-yellow-800 text-sm">
-                  <strong>Advertencia:</strong> Esta tarea tiene{" "}
-                  {task.subtaskCount} subtarea
-                  {task.subtaskCount !== 1 ? "s" : ""} que también se eliminará
-                  {task.subtaskCount !== 1 ? "n" : ""}.
-                </p>
+
+            {/* Advertencia de subtareas */}
+            {task.subtaskCount !== undefined && task.subtaskCount > 0 && (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                <div className="flex items-start">
+                  <svg
+                    className="h-5 w-5 text-yellow-400 mt-0.5 mr-2"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                  <div className="flex-1">
+                    <h4 className="text-sm font-medium text-yellow-800">
+                      Esta acción eliminará subtareas
+                    </h4>
+                    <p className="text-sm text-yellow-700 mt-1">
+                      Esta tarea tiene{" "}
+                      <strong>
+                        {task.subtaskCount} subtarea
+                        {task.subtaskCount !== 1 ? "s" : ""}
+                      </strong>{" "}
+                      que también{" "}
+                      {task.subtaskCount === 1
+                        ? "será eliminada"
+                        : "serán eliminadas"}{" "}
+                      permanentemente.
+                    </p>
+                  </div>
+                </div>
               </div>
             )}
+
             <p className="text-sm text-gray-500">
               Esta acción no se puede deshacer.
             </p>
