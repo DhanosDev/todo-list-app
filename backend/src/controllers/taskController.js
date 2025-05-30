@@ -258,6 +258,9 @@ const updateTask = async (req, res) => {
 // @desc    Delete task
 // @route   DELETE /api/tasks/:id
 // @access  Private
+// @desc    Delete task
+// @route   DELETE /api/tasks/:id
+// @access  Private
 const deleteTask = async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -269,7 +272,7 @@ const deleteTask = async (req, res) => {
       });
     }
 
-    const userId = req.user.id;
+    const userId = req.user._id; // Cambiado de req.user.id a req.user._id
     const task = await Task.findOne({
       _id: req.params.id,
       user: userId,
@@ -282,8 +285,30 @@ const deleteTask = async (req, res) => {
       });
     }
 
-    // Delete task (middleware will handle subtask deletion)
+    // Si es tarea padre, eliminar subtareas primero
+    if (!task.parentTask) {
+      const subtasks = await Task.find({ parentTask: task._id });
+      if (subtasks.length > 0) {
+        console.log(
+          `Deleting ${subtasks.length} subtasks for task: ${task.title}`
+        );
+        await Task.deleteMany({ parentTask: task._id });
+        console.log(`Subtasks deleted successfully`);
+      }
+    }
+
+    // Eliminar comentarios de esta tarea (si existen)
+    try {
+      const Comment = require("../models/Comment");
+      const commentDeleteResult = await Comment.deleteMany({ task: task._id });
+      console.log(`Deleted ${commentDeleteResult.deletedCount} comments`);
+    } catch (error) {
+      console.log("Comment cleanup skipped (model may not exist)");
+    }
+
+    // Eliminar la tarea principal
     await Task.findByIdAndDelete(req.params.id);
+    console.log(`Task deleted: ${task.title}`);
 
     res.status(200).json({
       success: true,

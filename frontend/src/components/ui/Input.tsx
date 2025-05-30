@@ -55,7 +55,6 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
 
 Textarea.displayName = "Textarea";
 
-// Select Component (usando tus estilos de dropdown)
 export interface SelectOption {
   value: string;
   label: string;

@@ -33,7 +33,7 @@ app.use(express.urlencoded({ extended: true }));
 // Routes
 app.use("/api/auth", require("./src/routes/authRoutes"));
 app.use("/api/tasks", require("./src/routes/taskRoutes"));
-app.use("/api/tasks", require("./src/routes/commentRoutes")); // Comments are nested under tasks
+app.use("/api", require("./src/routes/commentRoutes")); // ← CAMBIO AQUÍ: de "/api/tasks" a "/api"
 
 // Health check endpoint
 app.get("/api/health", (req, res) => {

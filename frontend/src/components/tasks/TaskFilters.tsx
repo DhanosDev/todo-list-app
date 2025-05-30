@@ -29,131 +29,202 @@ export function TaskFilters({
   };
 
   const handleSubtasksToggle = () => {
+    const newValue = !(currentFilters.includeSubtasks ?? true);
     onFiltersChange({
       ...currentFilters,
-      includeSubtasks: !currentFilters.includeSubtasks,
+      includeSubtasks: newValue,
     });
   };
 
   const handleClearFilters = () => {
-    onFiltersChange({});
+    onFiltersChange({
+      includeSubtasks: true,
+    });
   };
 
   const hasActiveFilters =
-    currentFilters.status || currentFilters.includeSubtasks === false;
+    currentFilters.status || (currentFilters.includeSubtasks ?? true) === false;
 
   return (
-    <div className="bg-surface border border-lines-light rounded-lg p-4 space-y-4">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <h3 className="text-preset-3 font-medium text-text-primary">Filtros</h3>
-        {hasActiveFilters && (
-          <Button
-            variant="secondary"
-            onClick={handleClearFilters}
-            disabled={isLoading}
-          >
-            Limpiar
-          </Button>
-        )}
-      </div>
-
-      {/* Status Filters */}
-      <div>
-        <h4 className="text-preset-4 font-medium text-text-primary mb-3">
-          Estado
-        </h4>
-        <div className="flex flex-wrap gap-2">
-          {/* All Tasks */}
-          <Button
-            variant={!currentFilters.status ? "primary-small" : "secondary"}
-            onClick={() => handleStatusFilter(undefined)}
-            disabled={isLoading}
-          >
-            Todas
-            {taskCounts && (
-              <span className="ml-2 text-preset-6">({taskCounts.total})</span>
-            )}
-          </Button>
-
-          {/* Pending Tasks */}
-          <Button
-            variant={
-              currentFilters.status === "pending"
-                ? "primary-small"
-                : "secondary"
-            }
-            onClick={() => handleStatusFilter("pending")}
-            disabled={isLoading}
-          >
-            Pendientes
-            {taskCounts && (
-              <span className="ml-2 text-preset-6">({taskCounts.pending})</span>
-            )}
-          </Button>
-
-          {/* Completed Tasks */}
-          <Button
-            variant={
-              currentFilters.status === "completed"
-                ? "primary-small"
-                : "secondary"
-            }
-            onClick={() => handleStatusFilter("completed")}
-            disabled={isLoading}
-          >
-            Completadas
-            {taskCounts && (
-              <span className="ml-2 text-preset-6">
-                ({taskCounts.completed})
-              </span>
-            )}
-          </Button>
+    <div className="bg-surface border border-lines-light rounded-lg overflow-hidden">
+      {/* Header - Fixed height to prevent jumping */}
+      <div className="px-5 py-4 border-b border-lines-light">
+        <div className="flex items-center justify-between min-h-[24px]">
+          <h3 className="text-heading-m text-text-primary">Filtros</h3>
+          <div className="flex items-center">
+            <Button
+              variant="secondary"
+              onClick={handleClearFilters}
+              disabled={isLoading || !hasActiveFilters}
+              className={`transition-all duration-200 ${
+                hasActiveFilters
+                  ? "opacity-100 scale-100"
+                  : "opacity-0 scale-95 pointer-events-none"
+              }`}
+            >
+              Limpiar
+            </Button>
+          </div>
         </div>
       </div>
 
-      {/* Display Options */}
-      <div>
-        <h4 className="text-preset-4 font-medium text-text-primary mb-3">
-          Mostrar
-        </h4>
-        <div className="flex items-center space-x-4">
-          {/* Include Subtasks Toggle */}
-          <label className="flex items-center space-x-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={currentFilters.includeSubtasks !== false}
-              onChange={handleSubtasksToggle}
+      <div className="p-5 space-y-6">
+        {/* Status Filters */}
+        <div>
+          <div className="flex items-center mb-4">
+            <div className="w-2 h-2 bg-main-purple rounded-full mr-3"></div>
+            <h4 className="text-heading-s text-text-secondary">Estado</h4>
+          </div>
+          <div className="grid grid-cols-1 gap-1.5">
+            {/* All Tasks */}
+            <button
+              onClick={() => handleStatusFilter(undefined)}
               disabled={isLoading}
-              className="w-4 h-4 text-main-purple bg-gray-100 border-gray-300 rounded focus:ring-main-purple focus:ring-2"
-            />
-            <span className="text-preset-5 text-text-primary">
+              className={`w-full px-4 py-3 rounded-lg text-left transition-all duration-200 disabled:opacity-50 ${
+                !currentFilters.status
+                  ? "bg-main-purple text-white shadow-sm"
+                  : "bg-gray-50 hover:bg-gray-100 text-text-primary"
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-body-l font-medium">Todas</span>
+                {taskCounts && (
+                  <span
+                    className={`text-body-m ${
+                      !currentFilters.status
+                        ? "text-white opacity-75"
+                        : "text-text-secondary"
+                    }`}
+                  >
+                    ({taskCounts.total})
+                  </span>
+                )}
+              </div>
+            </button>
+
+            {/* Pending Tasks */}
+            <button
+              onClick={() => handleStatusFilter("pending")}
+              disabled={isLoading}
+              className={`w-full px-4 py-3 rounded-lg text-left transition-all duration-200 disabled:opacity-50 ${
+                currentFilters.status === "pending"
+                  ? "bg-main-purple text-white shadow-sm"
+                  : "bg-gray-50 hover:bg-gray-100 text-text-primary"
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-body-l font-medium">Pendientes</span>
+                {taskCounts && (
+                  <span
+                    className={`text-body-m ${
+                      currentFilters.status === "pending"
+                        ? "text-white opacity-75"
+                        : "text-text-secondary"
+                    }`}
+                  >
+                    ({taskCounts.pending})
+                  </span>
+                )}
+              </div>
+            </button>
+
+            {/* Completed Tasks */}
+            <button
+              onClick={() => handleStatusFilter("completed")}
+              disabled={isLoading}
+              className={`w-full px-4 py-3 rounded-lg text-left transition-all duration-200 disabled:opacity-50 ${
+                currentFilters.status === "completed"
+                  ? "bg-main-purple text-white shadow-sm"
+                  : "bg-gray-50 hover:bg-gray-100 text-text-primary"
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-body-l font-medium">Completadas</span>
+                {taskCounts && (
+                  <span
+                    className={`text-body-m ${
+                      currentFilters.status === "completed"
+                        ? "text-white opacity-75"
+                        : "text-text-secondary"
+                    }`}
+                  >
+                    ({taskCounts.completed})
+                  </span>
+                )}
+              </div>
+            </button>
+          </div>
+        </div>
+
+        {/* Display Options */}
+        <div>
+          <div className="flex items-center mb-4">
+            <div className="w-2 h-2 bg-main-purple rounded-full mr-3"></div>
+            <h4 className="text-heading-s text-text-secondary">Mostrar</h4>
+          </div>
+          <label className="flex items-center space-x-3 cursor-pointer group">
+            <div className="relative">
+              <input
+                type="checkbox"
+                checked={currentFilters.includeSubtasks ?? true}
+                onChange={handleSubtasksToggle}
+                disabled={isLoading}
+                className="sr-only"
+              />
+              <div
+                className={`w-5 h-5 rounded border-2 transition-all duration-200 ${
+                  currentFilters.includeSubtasks ?? true
+                    ? "bg-main-purple border-main-purple"
+                    : "border-gray-300 group-hover:border-main-purple"
+                }`}
+              >
+                {(currentFilters.includeSubtasks ?? true) && (
+                  <svg
+                    className="w-3 h-3 text-white m-0.5"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                )}
+              </div>
+            </div>
+            <span className="text-body-l text-text-primary group-hover:text-main-purple transition-colors">
               Incluir subtareas
             </span>
           </label>
         </div>
-      </div>
 
-      {/* Active Filters Summary */}
-      {hasActiveFilters && (
-        <div className="border-t border-lines-light pt-3">
-          <p className="text-preset-6 text-text-secondary">
-            Filtros activos:
-            {currentFilters.status && (
-              <span className="ml-1 px-2 py-1 bg-main-purple text-white rounded text-preset-6">
-                {currentFilters.status === "pending"
-                  ? "Pendientes"
-                  : "Completadas"}
-              </span>
-            )}
-            {currentFilters.includeSubtasks === false && (
-              <span className="ml-1 px-2 py-1 bg-gray-200 text-gray-700 rounded text-preset-6">
-                Solo tareas principales
-              </span>
-            )}
-          </p>
-        </div>
-      )}
+        {/* Active Filters Summary */}
+        {hasActiveFilters && (
+          <div className="pt-4 border-t border-lines-light">
+            <div className="flex items-center mb-3">
+              <div className="w-2 h-2 bg-main-purple rounded-full mr-3"></div>
+              <h4 className="text-heading-s text-text-secondary">
+                Filtros activos
+              </h4>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {currentFilters.status && (
+                <span className="inline-flex items-center px-3 py-1.5 bg-main-purple text-white rounded-md text-body-m font-medium">
+                  {currentFilters.status === "pending"
+                    ? "Pendientes"
+                    : "Completadas"}
+                </span>
+              )}
+              {(currentFilters.includeSubtasks ?? true) === false && (
+                <span className="inline-flex items-center px-3 py-1.5 bg-gray-100 text-gray-700 rounded-md text-body-m font-medium">
+                  Solo tareas principales
+                </span>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

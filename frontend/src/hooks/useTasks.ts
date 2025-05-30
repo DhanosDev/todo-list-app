@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import {
   taskService,
   CreateTaskData,
@@ -9,13 +9,13 @@ import { Task } from "@/types";
 
 interface UseTasksState {
   tasks: Task[];
+  allTasks: Task[];
   isLoading: boolean;
   isCreating: boolean;
   isUpdating: boolean;
   isDeleting: boolean;
   error: string | null;
 }
-
 interface UseTasksActions {
   fetchTasks: (filters?: TaskFilters) => Promise<void>;
   refreshTasks: () => Promise<void>;
@@ -45,6 +45,7 @@ export type UseTasksReturn = UseTasksState & UseTasksActions;
 export function useTasks(initialFilters?: TaskFilters): UseTasksReturn {
   const [state, setState] = useState<UseTasksState>({
     tasks: [],
+    allTasks: [],
     isLoading: false,
     isCreating: false,
     isUpdating: false,
@@ -65,11 +66,24 @@ export function useTasks(initialFilters?: TaskFilters): UseTasksReturn {
       setState((prev) => ({ ...prev, isLoading: true, error: null }));
       setCurrentFilters(filters);
 
-      const tasks = await taskService.getTasks(filters);
+      const allTasksFromAPI = await taskService.getTasks();
+
+      let filteredTasks = allTasksFromAPI;
+
+      if (filters?.status) {
+        filteredTasks = filteredTasks.filter(
+          (task) => task.status === filters.status
+        );
+      }
+
+      if (filters?.includeSubtasks === false) {
+        filteredTasks = filteredTasks.filter((task) => !task.parentTask);
+      }
 
       setState((prev) => ({
         ...prev,
-        tasks,
+        allTasks: allTasksFromAPI,
+        tasks: filteredTasks,
         isLoading: false,
       }));
     } catch (err) {
@@ -97,6 +111,7 @@ export function useTasks(initialFilters?: TaskFilters): UseTasksReturn {
         setState((prev) => ({
           ...prev,
           tasks: [newTask, ...prev.tasks],
+          allTasks: [newTask, ...prev.allTasks],
           isCreating: false,
         }));
 
@@ -127,6 +142,10 @@ export function useTasks(initialFilters?: TaskFilters): UseTasksReturn {
           tasks: prev.tasks.map((task) =>
             task._id === taskId ? updatedTask : task
           ),
+
+          allTasks: prev.allTasks.map((task) =>
+            task._id === taskId ? updatedTask : task
+          ),
           isUpdating: false,
         }));
 
@@ -153,7 +172,12 @@ export function useTasks(initialFilters?: TaskFilters): UseTasksReturn {
 
       setState((prev) => ({
         ...prev,
-        tasks: prev.tasks.filter((task) => task._id !== taskId),
+        tasks: prev.tasks.filter(
+          (task) => task._id !== taskId && task.parentTask !== taskId
+        ),
+        allTasks: prev.allTasks.filter(
+          (task) => task._id !== taskId && task.parentTask !== taskId
+        ),
         isDeleting: false,
       }));
 
@@ -170,14 +194,71 @@ export function useTasks(initialFilters?: TaskFilters): UseTasksReturn {
     }
   }, []);
 
+  const updateParentTaskCounter = useCallback(
+    (parentTaskId: string, statusChange: "completed" | "pending") => {
+      setState((prev) => ({
+        ...prev,
+        tasks: prev.tasks.map((task) => {
+          if (task._id === parentTaskId) {
+            const currentPending = task.pendingSubtasks || 0;
+            const newPending =
+              statusChange === "completed"
+                ? Math.max(0, currentPending - 1)
+                : currentPending + 1;
+
+            return {
+              ...task,
+              pendingSubtasks: newPending,
+            };
+          }
+          return task;
+        }),
+
+        allTasks: prev.allTasks.map((task) => {
+          if (task._id === parentTaskId) {
+            const currentPending = task.pendingSubtasks || 0;
+            const newPending =
+              statusChange === "completed"
+                ? Math.max(0, currentPending - 1)
+                : currentPending + 1;
+
+            return {
+              ...task,
+              pendingSubtasks: newPending,
+            };
+          }
+          return task;
+        }),
+      }));
+    },
+    []
+  );
+
   const toggleTaskStatus = useCallback(
     async (
       taskId: string,
       status: "pending" | "completed"
     ): Promise<boolean> => {
-      try {
-        setState((prev) => ({ ...prev, isUpdating: true, error: null }));
+      const task = state.tasks.find((t) => t._id === taskId);
+      const isSubtask = !!task?.parentTask;
+      const parentTaskId = task?.parentTask;
+      const originalStatus = task?.status;
 
+      setState((prev) => ({
+        ...prev,
+        tasks: prev.tasks.map((task) =>
+          task._id === taskId ? { ...task, status } : task
+        ),
+        allTasks: prev.allTasks.map((task) =>
+          task._id === taskId ? { ...task, status } : task
+        ),
+      }));
+
+      if (isSubtask && parentTaskId && originalStatus) {
+        updateParentTaskCounter(parentTaskId, status);
+      }
+
+      try {
         const updatedTask = await taskService.toggleTaskStatus(taskId, status);
 
         setState((prev) => ({
@@ -185,22 +266,37 @@ export function useTasks(initialFilters?: TaskFilters): UseTasksReturn {
           tasks: prev.tasks.map((task) =>
             task._id === taskId ? updatedTask : task
           ),
-          isUpdating: false,
+          allTasks: prev.allTasks.map((task) =>
+            task._id === taskId ? updatedTask : task
+          ),
         }));
 
         return true;
       } catch (err) {
-        const errorMessage =
-          err instanceof Error ? err.message : "Failed to update task status";
         setState((prev) => ({
           ...prev,
-          error: errorMessage,
-          isUpdating: false,
+          tasks: prev.tasks.map((task) =>
+            task._id === taskId && originalStatus
+              ? { ...task, status: originalStatus }
+              : task
+          ),
+          allTasks: prev.allTasks.map((task) =>
+            task._id === taskId && originalStatus
+              ? { ...task, status: originalStatus }
+              : task
+          ),
+          error:
+            err instanceof Error ? err.message : "Failed to update task status",
         }));
+
+        if (isSubtask && parentTaskId && originalStatus) {
+          updateParentTaskCounter(parentTaskId, originalStatus);
+        }
+
         return false;
       }
     },
-    []
+    [state.tasks, updateParentTaskCounter]
   );
 
   const createSubtask = useCallback(
@@ -218,7 +314,33 @@ export function useTasks(initialFilters?: TaskFilters): UseTasksReturn {
 
         setState((prev) => ({
           ...prev,
-          tasks: [newSubtask, ...prev.tasks],
+          tasks: [
+            newSubtask,
+            ...prev.tasks.map((task) => {
+              if (task._id === parentTaskId) {
+                return {
+                  ...task,
+                  subtaskCount: (task.subtaskCount || 0) + 1,
+                  pendingSubtasks: (task.pendingSubtasks || 0) + 1,
+                };
+              }
+              return task;
+            }),
+          ],
+
+          allTasks: [
+            newSubtask,
+            ...prev.allTasks.map((task) => {
+              if (task._id === parentTaskId) {
+                return {
+                  ...task,
+                  subtaskCount: (task.subtaskCount || 0) + 1,
+                  pendingSubtasks: (task.pendingSubtasks || 0) + 1,
+                };
+              }
+              return task;
+            }),
+          ],
           isCreating: false,
         }));
 
@@ -244,23 +366,42 @@ export function useTasks(initialFilters?: TaskFilters): UseTasksReturn {
     [state.tasks]
   );
 
+  const returnValue = useMemo(
+    () => ({
+      ...state,
+      fetchTasks,
+      refreshTasks,
+      createTask,
+      updateTask,
+      deleteTask,
+      toggleTaskStatus,
+      createSubtask,
+      clearError,
+      getTaskById,
+    }),
+    [
+      state,
+      fetchTasks,
+      refreshTasks,
+      createTask,
+      updateTask,
+      deleteTask,
+      toggleTaskStatus,
+      createSubtask,
+      clearError,
+      getTaskById,
+    ]
+  );
+
   useEffect(() => {
-    fetchTasks(initialFilters);
+    if (initialFilters) {
+      fetchTasks(initialFilters);
+    } else {
+      fetchTasks();
+    }
   }, []);
 
-  return {
-    ...state,
-
-    fetchTasks,
-    refreshTasks,
-    createTask,
-    updateTask,
-    deleteTask,
-    toggleTaskStatus,
-    createSubtask,
-    clearError,
-    getTaskById,
-  };
+  return returnValue;
 }
 
 export function useTaskFilters() {
@@ -277,12 +418,17 @@ export function useTaskFilters() {
     setFilters({});
   }, []);
 
-  return {
-    filters,
-    updateFilter,
-    clearFilters,
-    setFilters,
-  };
+  const returnValue = useMemo(
+    () => ({
+      filters,
+      updateFilter,
+      clearFilters,
+      setFilters,
+    }),
+    [filters, updateFilter, clearFilters, setFilters]
+  );
+
+  return returnValue;
 }
 
 export default useTasks;
