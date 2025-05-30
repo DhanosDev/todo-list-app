@@ -87,14 +87,14 @@ export const TaskCard = memo(
         pending: {
           badge: "bg-yellow-100 text-yellow-800 border-yellow-200",
           checkbox: "border-gray-300 hover:border-yellow-400",
-          card: "border-l-yellow-400",
+          card: "hover:border-yellow-200",
           bgOpacity: "bg-opacity-100",
         },
         completed: {
           badge: "bg-green-100 text-green-800 border-green-200",
           checkbox: "bg-green-500 border-green-500",
-          card: "border-l-green-400",
-          bgOpacity: "bg-opacity-50",
+          card: "hover:border-green-200",
+          bgOpacity: "bg-opacity-95",
         },
       }),
       []
@@ -113,193 +113,99 @@ export const TaskCard = memo(
         {/* Task Card */}
         <div
           className={`
-        bg-white border-l-4 border-r border-t border-b rounded-lg shadow-sm hover:shadow-md transition-shadow
+        bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition-all duration-200
         ${currentStyles.card} ${currentStyles.bgOpacity}
-        ${isLoading ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}
+        ${isLoading ? "opacity-50 cursor-not-allowed" : ""}
       `}
         >
-          <div className="p-4">
+          <div className="p-5">
             {/* Task Header */}
-            <div className="flex items-start justify-between mb-3">
-              <div className="flex items-start space-x-3 flex-1">
-                {/* Status Checkbox */}
-                <button
-                  onClick={handleStatusToggle}
-                  disabled={
-                    isLoading || (task.status === "pending" && !canComplete)
-                  }
-                  className={`
-                  flex-shrink-0 w-5 h-5 rounded border-2 flex items-center justify-center transition-colors
-                  ${
-                    task.status === "completed"
-                      ? "bg-green-500 border-green-500 hover:bg-green-600"
-                      : canComplete
-                      ? "border-gray-300 hover:border-green-400 hover:bg-green-50"
-                      : "border-red-300 bg-red-50 cursor-not-allowed"
-                  }
-                  ${isLoading ? "cursor-not-allowed" : "cursor-pointer"}
-                `}
-                  title={
-                    !canComplete
-                      ? "No se puede completar: hay subtareas pendientes"
-                      : ""
-                  }
-                >
-                  {task.status === "completed" && (
-                    <svg
-                      className="w-3 h-3 text-white"
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                  )}
-                </button>
+            <div className="flex items-start gap-4 mb-4">
+              {/* Status Checkbox */}
+              <button
+                onClick={handleStatusToggle}
+                disabled={
+                  isLoading || (task.status === "pending" && !canComplete)
+                }
+                className={`
+                flex-shrink-0 w-6 h-6 rounded-md border-2 flex items-center justify-center transition-all duration-200
+                ${
+                  task.status === "completed"
+                    ? "bg-green-500 border-green-500 hover:bg-green-600 shadow-sm"
+                    : canComplete
+                    ? "border-gray-300 hover:border-green-400 hover:bg-green-50"
+                    : "border-red-300 bg-red-50 cursor-not-allowed"
+                }
+                ${isLoading ? "cursor-not-allowed" : "cursor-pointer"}
+              `}
+                title={
+                  !canComplete
+                    ? "No se puede completar: hay subtareas pendientes"
+                    : ""
+                }
+              >
+                {task.status === "completed" && (
+                  <svg
+                    className="w-4 h-4 text-white"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                )}
+              </button>
 
-                {/* Task Content */}
-                <div className="flex-1 min-w-0">
+              {/* Task Content */}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-start justify-between gap-3 mb-3">
                   <h3
                     className={`
-                  font-medium text-gray-900 mb-1
-                  ${
-                    task.status === "completed"
-                      ? "line-through text-gray-500"
-                      : ""
-                  }
-                `}
+                    text-heading-m text-gray-900 leading-snug
+                    ${
+                      task.status === "completed"
+                        ? "line-through text-gray-500"
+                        : ""
+                    }
+                  `}
                   >
                     {task.title}
                   </h3>
 
-                  {task.description && (
-                    <p
-                      className={`
-                    text-sm text-gray-600 mb-2
+                  {/* Status Badge */}
+                  <span
+                    className={`
+                    inline-flex items-center px-3 py-1 rounded-full text-body-m border flex-shrink-0
+                    ${currentStyles.badge}
+                  `}
+                  >
+                    {task.status === "pending" ? "Pendiente" : "Completada"}
+                  </span>
+                </div>
+
+                {task.description && (
+                  <p
+                    className={`
+                    text-body-l text-gray-600 mb-3 leading-relaxed
                     ${
                       task.status === "completed"
                         ? "line-through text-gray-400"
                         : ""
                     }
                   `}
-                    >
-                      {task.description}
-                    </p>
-                  )}
-
-                  {/* Task Metadata */}
-                  <div className="flex items-center flex-wrap gap-2 text-xs text-gray-500">
-                    <span>{getRelativeTime(task.createdAt)}</span>
-
-                    {/* Subtask Info */}
-                    {hasSubtasks && (
-                      <>
-                        <span>•</span>
-                        <span
-                          className={
-                            task.pendingSubtasks !== undefined &&
-                            task.pendingSubtasks > 0
-                              ? "text-yellow-600"
-                              : "text-green-600"
-                          }
-                        >
-                          {task.subtaskCount} subtarea
-                          {task.subtaskCount !== 1 ? "s" : ""}
-                          {task.pendingSubtasks !== undefined &&
-                            task.pendingSubtasks > 0 && (
-                              <span className="text-yellow-600">
-                                {" "}
-                                ({task.pendingSubtasks} pendiente
-                                {task.pendingSubtasks !== 1 ? "s" : ""})
-                              </span>
-                            )}
-                        </span>
-                      </>
-                    )}
-
-                    {/* Comments Count */}
-                    {commentCount > 0 && (
-                      <>
-                        <span>•</span>
-                        <button
-                          onClick={handleCommentsClick}
-                          className="text-blue-600 hover:text-blue-800 flex items-center space-x-1"
-                        >
-                          <svg
-                            className="w-3 h-3"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-                            />
-                          </svg>
-                          <span>
-                            {commentCount} comentario
-                            {commentCount !== 1 ? "s" : ""}
-                          </span>
-                        </button>
-                      </>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Status Badge */}
-              <span
-                className={`
-              inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border
-              ${currentStyles.badge}
-            `}
-              >
-                {task.status === "pending" ? "Pendiente" : "Completada"}
-              </span>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="flex items-center justify-center gap-4 sm:justify-between pt-3 border-t border-gray-100">
-              {/* Left Group - Comments and Subtask (Desktop) */}
-              <div className="hidden sm:flex sm:items-center sm:gap-2">
-                {/* Comments Button */}
-                <Button
-                  variant="secondary"
-                  onClick={handleCommentsClick}
-                  disabled={isLoading}
-                  className="text-gray-600 hover:text-blue-600 text-sm"
-                >
-                  <svg
-                    className="w-4 h-4 mr-1"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
                   >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-                    />
-                  </svg>
-                  Comentarios
-                </Button>
+                    {task.description}
+                  </p>
+                )}
 
-                {/* Add Subtask Button - Only for parent tasks */}
-                {!task.parentTask && (
-                  <Button
-                    variant="secondary"
-                    onClick={handleAddSubtask}
-                    disabled={isLoading}
-                    className="text-gray-600 hover:text-purple-600 text-sm"
-                  >
+                {/* Task Metadata */}
+                <div className="flex items-center flex-wrap gap-3 text-body-m text-gray-500">
+                  <div className="flex items-center gap-1">
                     <svg
-                      className="w-4 h-4 mr-1"
+                      className="w-4 h-4"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -308,71 +214,185 @@ export const TaskCard = memo(
                         strokeLinecap="round"
                         strokeLinejoin="round"
                         strokeWidth={2}
-                        d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
                       />
                     </svg>
-                    Subtarea
+                    <span>{getRelativeTime(task.createdAt)}</span>
+                  </div>
+
+                  {/* Subtask Info */}
+                  {hasSubtasks && (
+                    <div className="flex items-center gap-1">
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
+                        />
+                      </svg>
+                      <span
+                        className={
+                          task.pendingSubtasks !== undefined &&
+                          task.pendingSubtasks > 0
+                            ? "text-yellow-600 font-medium"
+                            : "text-green-600 font-medium"
+                        }
+                      >
+                        {task.subtaskCount} subtarea
+                        {task.subtaskCount !== 1 ? "s" : ""}
+                        {task.pendingSubtasks !== undefined &&
+                          task.pendingSubtasks > 0 && (
+                            <span className="text-yellow-600 ml-1">
+                              ({task.pendingSubtasks} pendiente
+                              {task.pendingSubtasks !== 1 ? "s" : ""})
+                            </span>
+                          )}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Comments Count */}
+                  {commentCount > 0 && (
+                    <button
+                      onClick={handleCommentsClick}
+                      className="flex items-center gap-1 text-blue-600 hover:text-blue-800 transition-colors"
+                    >
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+                        />
+                      </svg>
+                      <span className="font-medium">
+                        {commentCount} comentario{commentCount !== 1 ? "s" : ""}
+                      </span>
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="pt-4 border-t border-gray-100">
+              {/* Desktop Layout */}
+              <div className="hidden sm:flex sm:items-center sm:justify-between">
+                {/* Left Group - Primary Actions */}
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="secondary"
+                    onClick={handleCommentsClick}
+                    disabled={isLoading}
+                    className="text-gray-600 hover:text-blue-600 text-body-l px-4 py-2"
+                  >
+                    <svg
+                      className="w-4 h-4 mr-2"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+                      />
+                    </svg>
+                    Comentarios
                   </Button>
-                )}
+
+                  {!task.parentTask && (
+                    <Button
+                      variant="secondary"
+                      onClick={handleAddSubtask}
+                      disabled={isLoading}
+                      className="text-gray-600 hover:text-purple-600 text-body-l px-4 py-2"
+                    >
+                      <svg
+                        className="w-4 h-4 mr-2"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                        />
+                      </svg>
+                      Subtarea
+                    </Button>
+                  )}
+                </div>
+
+                {/* Right Group - Secondary Actions */}
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="secondary"
+                    onClick={handleEdit}
+                    disabled={isLoading}
+                    className="text-gray-600 hover:text-blue-600 text-body-l px-4 py-2"
+                  >
+                    <svg
+                      className="w-4 h-4 mr-2"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                      />
+                    </svg>
+                    Editar
+                  </Button>
+
+                  <Button
+                    variant="secondary"
+                    onClick={handleDelete}
+                    disabled={isLoading}
+                    className="text-gray-600 hover:text-red-600 text-body-l px-4 py-2"
+                  >
+                    <svg
+                      className="w-4 h-4 mr-2"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                      />
+                    </svg>
+                    Eliminar
+                  </Button>
+                </div>
               </div>
 
-              {/* Right Group - Edit and Delete (Desktop) */}
-              <div className="hidden sm:flex sm:items-center sm:gap-2">
-                {/* Edit Button */}
-                <Button
-                  variant="secondary"
-                  onClick={handleEdit}
-                  disabled={isLoading}
-                  className="text-gray-600 hover:text-blue-600 text-sm"
-                >
-                  <svg
-                    className="w-4 h-4 mr-1"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                    />
-                  </svg>
-                  Editar
-                </Button>
-
-                {/* Delete Button */}
-                <Button
-                  variant="secondary"
-                  onClick={handleDelete}
-                  disabled={isLoading}
-                  className="text-gray-600 hover:text-red-600 text-sm"
-                >
-                  <svg
-                    className="w-4 h-4 mr-1"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                    />
-                  </svg>
-                  Eliminar
-                </Button>
-              </div>
-
-              {/* Mobile Buttons - All centered */}
-              <div className="flex sm:hidden items-center gap-4 w-full justify-center">
-                {/* Comments Button */}
+              {/* Mobile Layout */}
+              <div className="flex sm:hidden gap-2">
                 <Button
                   variant="secondary"
                   onClick={handleCommentsClick}
                   disabled={isLoading}
-                  className="text-gray-600 hover:text-blue-600 text-sm px-3 py-2 min-w-[44px] flex-1"
+                  className="text-gray-600 hover:text-blue-600 flex-1 px-3 py-2.5"
                 >
                   <svg
                     className="w-5 h-5"
@@ -389,13 +409,12 @@ export const TaskCard = memo(
                   </svg>
                 </Button>
 
-                {/* Add Subtask Button - Only for parent tasks */}
                 {!task.parentTask && (
                   <Button
                     variant="secondary"
                     onClick={handleAddSubtask}
                     disabled={isLoading}
-                    className="text-gray-600 hover:text-purple-600 text-sm px-3 py-2 min-w-[44px] flex-1"
+                    className="text-gray-600 hover:text-purple-600 flex-1 px-3 py-2.5"
                   >
                     <svg
                       className="w-5 h-5"
@@ -413,12 +432,11 @@ export const TaskCard = memo(
                   </Button>
                 )}
 
-                {/* Edit Button */}
                 <Button
                   variant="secondary"
                   onClick={handleEdit}
                   disabled={isLoading}
-                  className="text-gray-600 hover:text-blue-600 text-sm px-3 py-2 min-w-[44px] flex-1"
+                  className="text-gray-600 hover:text-blue-600 flex-1 px-3 py-2.5"
                 >
                   <svg
                     className="w-5 h-5"
@@ -435,12 +453,11 @@ export const TaskCard = memo(
                   </svg>
                 </Button>
 
-                {/* Delete Button */}
                 <Button
                   variant="secondary"
                   onClick={handleDelete}
                   disabled={isLoading}
-                  className="text-gray-600 hover:text-red-600 text-sm px-3 py-2 min-w-[44px] flex-1"
+                  className="text-gray-600 hover:text-red-600 flex-1 px-3 py-2.5"
                 >
                   <svg
                     className="w-5 h-5"
@@ -480,7 +497,7 @@ export const TaskCard = memo(
           }}
         >
           <div className="space-y-3">
-            <p className="text-gray-700">
+            <p className="text-body-l text-gray-700">
               ¿Estás seguro que deseas eliminar la tarea &quot;
               <strong>{task.title}</strong>&quot;?
             </p>
@@ -501,10 +518,10 @@ export const TaskCard = memo(
                     />
                   </svg>
                   <div className="flex-1">
-                    <h4 className="text-sm font-medium text-yellow-800">
+                    <h4 className="text-body-l text-yellow-800 font-medium">
                       Esta acción eliminará subtareas
                     </h4>
-                    <p className="text-sm text-yellow-700 mt-1">
+                    <p className="text-body-l text-yellow-700 mt-1">
                       Esta tarea tiene{" "}
                       <strong>
                         {task.subtaskCount} subtarea
@@ -521,7 +538,7 @@ export const TaskCard = memo(
               </div>
             )}
 
-            <p className="text-sm text-gray-500">
+            <p className="text-body-m text-gray-500">
               Esta acción no se puede deshacer.
             </p>
           </div>
@@ -543,7 +560,7 @@ export const TaskCard = memo(
           )}
 
           {showCommentsModal && !task._id && (
-            <div className="text-red-500 p-4">
+            <div className="text-red-500 p-4 text-body-l">
               Error: No se pudo obtener el ID de la tarea
             </div>
           )}
