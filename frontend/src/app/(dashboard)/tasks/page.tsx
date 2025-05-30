@@ -55,8 +55,6 @@ export default function TasksPage() {
           const statusText =
             status === "completed" ? "completada" : "marcada como pendiente";
           toast.success(`Tarea ${statusText}`);
-          // Refrescar las tareas para actualizar contadores y UI
-          fetchTasks(filters);
         }
       } catch (err) {
         const message =
@@ -64,7 +62,7 @@ export default function TasksPage() {
         toast.error(message);
       }
     },
-    [toggleTaskStatus, clearError, fetchTasks, filters]
+    [toggleTaskStatus, clearError]
   );
 
   const handleDeleteTask = useCallback(
@@ -213,14 +211,15 @@ export default function TasksPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header Mejorado */}
+      {/* Header */}
       <div className="bg-surface border-b border-lines-light">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            {/* Header Content */}
-            <div className="flex-1">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-8 h-8 bg-main-purple rounded-lg flex items-center justify-center">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="flex items-center justify-between">
+            {/* Left Section - Title + User Info */}
+            <div className="flex items-center gap-4">
+              {/* Icon + Title */}
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-gradient-to-br from-main-purple to-main-purple-hover rounded-xl flex items-center justify-center shadow-sm">
                   <svg
                     className="w-5 h-5 text-white"
                     fill="none"
@@ -235,54 +234,59 @@ export default function TasksPage() {
                     />
                   </svg>
                 </div>
-                <h1 className="text-heading-xl text-text-primary">
-                  Mis Tareas
-                </h1>
+                <div>
+                  <h1 className="text-heading-l font-bold text-text-primary">
+                    Mis Tareas
+                  </h1>
+                  <p className="text-body-m text-text-secondary">
+                    Hola{" "}
+                    <span className="font-medium text-text-primary">
+                      {user?.name}
+                    </span>
+                    , {statusMessage}
+                  </p>
+                </div>
               </div>
 
-              <div className="flex items-center gap-2">
-                <p className="text-body-l text-text-secondary">
-                  Hola{" "}
-                  <span className="font-medium text-text-primary">
-                    {user?.name}
+              {/* Stats Compactas */}
+              <div className="hidden sm:flex items-center gap-4 pl-4 border-l border-lines-light">
+                {/* Total */}
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
+                  <span className="text-body-m text-text-secondary font-medium">
+                    {taskCounts.total}
                   </span>
-                  , {statusMessage}
-                </p>
+                </div>
 
+                {/* Pendientes Badge */}
                 {taskCounts.pending > 0 && (
-                  <span className="inline-flex items-center px-2.5 py-1 rounded-full text-body-m bg-yellow-100 text-yellow-800 border border-yellow-200">
-                    {taskCounts.pending} pendiente
-                    {taskCounts.pending !== 1 ? "s" : ""}
-                  </span>
+                  <div className="flex items-center gap-2 px-3 py-1 bg-yellow-50 border border-yellow-200 rounded-full">
+                    <div className="w-2 h-2 bg-yellow-400 rounded-full"></div>
+                    <span className="text-body-m text-yellow-700 font-medium">
+                      {taskCounts.pending} pend.
+                    </span>
+                  </div>
+                )}
+
+                {/* Completadas */}
+                {taskCounts.completed > 0 && (
+                  <div className="flex items-center gap-2 px-3 py-1 bg-green-50 border border-green-200 rounded-full">
+                    <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+                    <span className="text-body-m text-green-700 font-medium">
+                      {taskCounts.completed} comp.
+                    </span>
+                  </div>
                 )}
               </div>
-
-              {/* Stats rápidas */}
-              {taskCounts.total > 0 && (
-                <div className="flex items-center gap-6 mt-3">
-                  <div className="flex items-center gap-2 text-body-m text-text-secondary">
-                    <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
-                    <span>{taskCounts.total} total</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-body-m text-text-secondary">
-                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                    <span>{taskCounts.completed} completadas</span>
-                  </div>
-                </div>
-              )}
             </div>
 
-            {/* Action Button */}
-            {viewMode === "list" && (
-              <div className="flex-shrink-0">
-                <Button
-                  variant="primary-large"
-                  onClick={handleNewTaskClick}
-                  disabled={isLoading}
-                  className="w-full sm:w-auto"
-                >
+            {/* Right Section - Actions */}
+            <div className="flex items-center gap-3">
+              {/* Filtros Activos Indicator */}
+              {(filters.status || filters.includeSubtasks === false) && (
+                <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-main-purple-hover bg-opacity-10 border border-main-purple-hover border-opacity-20 rounded-lg">
                   <svg
-                    className="w-4 h-4 mr-2"
+                    className="w-4 h-4 text-main-purple"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -291,13 +295,99 @@ export default function TasksPage() {
                       strokeLinecap="round"
                       strokeLinejoin="round"
                       strokeWidth={2}
-                      d="M9 13h6m-3-3v6m-9 1V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2z"
+                      d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
                     />
                   </svg>
-                  Nueva tarea
+                  <span className="text-body-m text-main-purple font-medium">
+                    Filtros
+                  </span>
+                </div>
+              )}
+
+              {/* Nueva Tarea Button */}
+              {viewMode === "list" && (
+                <Button
+                  variant="primary-large"
+                  onClick={handleNewTaskClick}
+                  disabled={isLoading}
+                  className="flex items-center gap-2 px-4 py-2.5"
+                >
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                    />
+                  </svg>
+                  <span className="hidden sm:inline text-body-l">
+                    Nueva tarea
+                  </span>
+                  <span className="sm:hidden text-body-l">Nueva</span>
                 </Button>
+              )}
+            </div>
+          </div>
+
+          {/* Mobile Stats - Solo visible en móvil */}
+          <div className="sm:hidden mt-4 pt-4 border-t border-lines-light">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
+                  <span className="text-body-m text-text-secondary">
+                    {taskCounts.total} total
+                  </span>
+                </div>
+
+                {taskCounts.pending > 0 && (
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-yellow-400 rounded-full"></div>
+                    <span className="text-body-m text-yellow-600">
+                      {taskCounts.pending} pend.
+                    </span>
+                  </div>
+                )}
+
+                {taskCounts.completed > 0 && (
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+                    <span className="text-body-m text-green-600">
+                      {taskCounts.completed} comp.
+                    </span>
+                  </div>
+                )}
               </div>
-            )}
+
+              {/* Mobile Actions */}
+              <div className="flex items-center gap-2">
+                {(filters.status || filters.includeSubtasks === false) && (
+                  <div className="flex items-center gap-1 px-2 py-1 bg-main-purple-hover bg-opacity-10 rounded">
+                    <svg
+                      className="w-3 h-3 text-main-purple"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
+                      />
+                    </svg>
+                    <span className="text-body-m text-main-purple">
+                      Filtros
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       </div>

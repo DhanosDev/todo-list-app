@@ -142,6 +142,10 @@ export function useTasks(initialFilters?: TaskFilters): UseTasksReturn {
           tasks: prev.tasks.map((task) =>
             task._id === taskId ? updatedTask : task
           ),
+
+          allTasks: prev.allTasks.map((task) =>
+            task._id === taskId ? updatedTask : task
+          ),
           isUpdating: false,
         }));
 
@@ -168,7 +172,12 @@ export function useTasks(initialFilters?: TaskFilters): UseTasksReturn {
 
       setState((prev) => ({
         ...prev,
-        tasks: prev.tasks.filter((task) => task._id !== taskId),
+        tasks: prev.tasks.filter(
+          (task) => task._id !== taskId && task.parentTask !== taskId
+        ),
+        allTasks: prev.allTasks.filter(
+          (task) => task._id !== taskId && task.parentTask !== taskId
+        ),
         isDeleting: false,
       }));
 
@@ -204,6 +213,22 @@ export function useTasks(initialFilters?: TaskFilters): UseTasksReturn {
           }
           return task;
         }),
+
+        allTasks: prev.allTasks.map((task) => {
+          if (task._id === parentTaskId) {
+            const currentPending = task.pendingSubtasks || 0;
+            const newPending =
+              statusChange === "completed"
+                ? Math.max(0, currentPending - 1)
+                : currentPending + 1;
+
+            return {
+              ...task,
+              pendingSubtasks: newPending,
+            };
+          }
+          return task;
+        }),
       }));
     },
     []
@@ -224,6 +249,9 @@ export function useTasks(initialFilters?: TaskFilters): UseTasksReturn {
         tasks: prev.tasks.map((task) =>
           task._id === taskId ? { ...task, status } : task
         ),
+        allTasks: prev.allTasks.map((task) =>
+          task._id === taskId ? { ...task, status } : task
+        ),
       }));
 
       if (isSubtask && parentTaskId && originalStatus) {
@@ -238,6 +266,9 @@ export function useTasks(initialFilters?: TaskFilters): UseTasksReturn {
           tasks: prev.tasks.map((task) =>
             task._id === taskId ? updatedTask : task
           ),
+          allTasks: prev.allTasks.map((task) =>
+            task._id === taskId ? updatedTask : task
+          ),
         }));
 
         return true;
@@ -245,6 +276,11 @@ export function useTasks(initialFilters?: TaskFilters): UseTasksReturn {
         setState((prev) => ({
           ...prev,
           tasks: prev.tasks.map((task) =>
+            task._id === taskId && originalStatus
+              ? { ...task, status: originalStatus }
+              : task
+          ),
+          allTasks: prev.allTasks.map((task) =>
             task._id === taskId && originalStatus
               ? { ...task, status: originalStatus }
               : task

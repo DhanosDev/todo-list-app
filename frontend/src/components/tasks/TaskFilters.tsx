@@ -38,7 +38,7 @@ export function TaskFilters({
 
   const handleClearFilters = () => {
     onFiltersChange({
-      includeSubtasks: true, // Valor por defecto explícito
+      includeSubtasks: true,
     });
   };
 

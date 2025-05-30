@@ -1,4 +1,3 @@
-// src/services/commentService.ts
 import api from "./api";
 import { Comment } from "@/hooks/useComments";
 

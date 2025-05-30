@@ -27,7 +27,7 @@ export const TaskCard = memo(
   }: TaskCardProps) {
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [showCommentsModal, setShowCommentsModal] = useState(false);
-    const [commentCount, setCommentCount] = useState(0);
+    const [_commentCount, setCommentCount] = useState(0);
 
     const getRelativeTime = useCallback((dateString: string) => {
       try {
@@ -85,16 +85,19 @@ export const TaskCard = memo(
     const statusStyles = useCallback(
       () => ({
         pending: {
-          badge: "bg-yellow-100 text-yellow-800 border-yellow-200",
-          checkbox: "border-gray-300 hover:border-yellow-400",
-          card: "hover:border-yellow-200",
-          bgOpacity: "bg-opacity-100",
+          badge: "bg-yellow-50 text-yellow-700 border border-yellow-200",
+          checkbox:
+            "border-lines-light hover:border-yellow-400 hover:bg-yellow-50",
+          card: "border-lines-light hover:border-yellow-300 hover:shadow-md",
+          accent: "border-l-4 border-l-yellow-400",
+          icon: "text-yellow-500",
         },
         completed: {
-          badge: "bg-green-100 text-green-800 border-green-200",
-          checkbox: "bg-green-500 border-green-500",
-          card: "hover:border-green-200",
-          bgOpacity: "bg-opacity-95",
+          badge: "bg-green-50 text-green-700 border border-green-200",
+          checkbox: "bg-green-500 border-green-500 shadow-sm",
+          card: "border-lines-light hover:border-green-300 hover:shadow-md",
+          accent: "border-l-4 border-l-green-400",
+          icon: "text-green-500",
         },
       }),
       []
@@ -107,37 +110,50 @@ export const TaskCard = memo(
       task.status === "pending"
         ? task.pendingSubtasks === undefined || task.pendingSubtasks === 0
         : true;
+    const isSubtask = !!task.parentTask;
 
     return (
       <>
         {/* Task Card */}
         <div
           className={`
-        bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition-all duration-200
-        ${currentStyles.card} ${currentStyles.bgOpacity}
-        ${isLoading ? "opacity-50 cursor-not-allowed" : ""}
-      `}
+            group relative bg-surface rounded-xl shadow-sm transition-all duration-300
+            ${currentStyles.card} ${currentStyles.accent}
+            ${isLoading ? "opacity-60 cursor-not-allowed" : "cursor-default"}
+            ${isSubtask ? "ml-6 border-l-2 border-l-gray-300" : ""}
+            hover:shadow-md hover:-translate-y-0.5
+          `}
         >
-          <div className="p-5">
+          {/* Priority Indicator */}
+          {!isSubtask && (
+            <div
+              className={`absolute top-0 right-0 w-2 h-2 rounded-bl rounded-tr-xl ${
+                task.status === "pending" ? "bg-yellow-400" : "bg-green-400"
+              }`}
+            />
+          )}
+
+          <div className="p-4">
             {/* Task Header */}
-            <div className="flex items-start gap-4 mb-4">
-              {/* Status Checkbox */}
+            <div className="flex items-start gap-3 mb-2">
+              {/* Enhanced Status Checkbox */}
               <button
                 onClick={handleStatusToggle}
                 disabled={
                   isLoading || (task.status === "pending" && !canComplete)
                 }
                 className={`
-                flex-shrink-0 w-6 h-6 rounded-md border-2 flex items-center justify-center transition-all duration-200
-                ${
-                  task.status === "completed"
-                    ? "bg-green-500 border-green-500 hover:bg-green-600 shadow-sm"
-                    : canComplete
-                    ? "border-gray-300 hover:border-green-400 hover:bg-green-50"
-                    : "border-red-300 bg-red-50 cursor-not-allowed"
-                }
-                ${isLoading ? "cursor-not-allowed" : "cursor-pointer"}
-              `}
+                  group/checkbox flex-shrink-0 w-6 h-6 rounded-md border-2 flex items-center justify-center 
+                  transition-all duration-200 shadow-sm
+                  ${
+                    task.status === "completed"
+                      ? "bg-green-500 border-green-500 hover:bg-green-600 hover:scale-105"
+                      : canComplete
+                      ? "border-lines-light hover:border-green-400 hover:bg-green-50 hover:scale-105"
+                      : "border-red-300 bg-red-50 cursor-not-allowed"
+                  }
+                  ${isLoading ? "cursor-not-allowed" : "cursor-pointer"}
+                `}
                 title={
                   !canComplete
                     ? "No se puede completar: hay subtareas pendientes"
@@ -157,42 +173,83 @@ export const TaskCard = memo(
                     />
                   </svg>
                 )}
+                {task.status === "pending" && canComplete && (
+                  <div className="w-2.5 h-2.5 rounded-full bg-gray-300 group-hover/checkbox:bg-green-400 transition-colors" />
+                )}
+                {task.status === "pending" && !canComplete && (
+                  <svg
+                    className="w-3.5 h-3.5 text-red-400"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                )}
               </button>
 
               {/* Task Content */}
               <div className="flex-1 min-w-0">
-                <div className="flex items-start justify-between gap-3 mb-3">
-                  <h3
-                    className={`
-                    text-heading-m text-gray-900 leading-snug
-                    ${
-                      task.status === "completed"
-                        ? "line-through text-gray-500"
-                        : ""
-                    }
-                  `}
-                  >
-                    {task.title}
-                  </h3>
+                <div className="flex items-start justify-between gap-3 mb-2">
+                  <div className="flex-1 min-w-0">
+                    <h3
+                      className={`
+                      text-heading-s font-medium text-text-primary leading-snug mb-1
+                      ${
+                        task.status === "completed"
+                          ? "line-through text-text-secondary"
+                          : ""
+                      }
+                    `}
+                    >
+                      {task.title}
+                    </h3>
 
-                  {/* Status Badge */}
-                  <span
-                    className={`
-                    inline-flex items-center px-3 py-1 rounded-full text-body-m border flex-shrink-0
-                    ${currentStyles.badge}
-                  `}
-                  >
-                    {task.status === "pending" ? "Pendiente" : "Completada"}
-                  </span>
+                    {/* Task Type Badge */}
+                    {isSubtask && (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-body-m bg-purple-50 text-purple-700 border border-purple-200">
+                        <svg
+                          className="w-3 h-3 mr-1"
+                          fill="currentColor"
+                          viewBox="0 0 20 20"
+                        >
+                          <path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM11 13a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                        </svg>
+                        Subtarea
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Enhanced Status Badge */}
+                  <div className="flex flex-col items-end gap-1">
+                    <span
+                      className={`
+                      inline-flex items-center px-2 py-1 rounded-full text-body-m font-medium
+                      ${currentStyles.badge} backdrop-blur-sm
+                    `}
+                    >
+                      <div
+                        className={`w-1.5 h-1.5 rounded-full mr-1.5 ${
+                          task.status === "pending"
+                            ? "bg-yellow-400"
+                            : "bg-green-400"
+                        }`}
+                      />
+                      {task.status === "pending" ? "Pendiente" : "Completada"}
+                    </span>
+                  </div>
                 </div>
 
                 {task.description && (
                   <p
                     className={`
-                    text-body-l text-gray-600 mb-3 leading-relaxed
+                    text-body-m text-text-secondary mb-2 leading-relaxed
                     ${
                       task.status === "completed"
-                        ? "line-through text-gray-400"
+                        ? "line-through opacity-75"
                         : ""
                     }
                   `}
@@ -201,30 +258,13 @@ export const TaskCard = memo(
                   </p>
                 )}
 
-                {/* Task Metadata */}
-                <div className="flex items-center flex-wrap gap-3 text-body-m text-gray-500">
-                  <div className="flex items-center gap-1">
-                    <svg
-                      className="w-4 h-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                      />
-                    </svg>
-                    <span>{getRelativeTime(task.createdAt)}</span>
-                  </div>
-
-                  {/* Subtask Info */}
-                  {hasSubtasks && (
-                    <div className="flex items-center gap-1">
+                {/* Enhanced Task Metadata */}
+                <div className="flex items-center flex-wrap gap-2 text-body-m">
+                  {/* Creation Time */}
+                  <div className="flex items-center gap-1.5 text-text-secondary">
+                    <div className="w-6 h-6 rounded bg-blue-50 flex items-center justify-center">
                       <svg
-                        className="w-4 h-4"
+                        className="w-3.5 h-3.5 text-blue-500"
                         fill="none"
                         stroke="currentColor"
                         viewBox="0 0 24 24"
@@ -233,38 +273,55 @@ export const TaskCard = memo(
                           strokeLinecap="round"
                           strokeLinejoin="round"
                           strokeWidth={2}
-                          d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
+                          d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
                         />
                       </svg>
-                      <span
-                        className={
-                          task.pendingSubtasks !== undefined &&
-                          task.pendingSubtasks > 0
-                            ? "text-yellow-600 font-medium"
-                            : "text-green-600 font-medium"
-                        }
-                      >
-                        {task.subtaskCount} subtarea
-                        {task.subtaskCount !== 1 ? "s" : ""}
+                    </div>
+                    <span className="text-body-m">
+                      {getRelativeTime(task.createdAt)}
+                    </span>
+                  </div>
+
+                  {/* Subtask Info */}
+                  {hasSubtasks && (
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-6 h-6 rounded bg-purple-50 flex items-center justify-center">
+                        <svg
+                          className="w-3.5 h-3.5 text-purple-500"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
+                          />
+                        </svg>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <span className="text-body-m font-medium text-text-primary">
+                          {task.subtaskCount} sub
+                        </span>
                         {task.pendingSubtasks !== undefined &&
                           task.pendingSubtasks > 0 && (
-                            <span className="text-yellow-600 ml-1">
-                              ({task.pendingSubtasks} pendiente
-                              {task.pendingSubtasks !== 1 ? "s" : ""})
+                            <span className="text-yellow-600 text-body-m">
+                              ({task.pendingSubtasks} pend.)
                             </span>
                           )}
-                      </span>
+                      </div>
                     </div>
                   )}
 
-                  {/* Comments Count */}
-                  {commentCount > 0 && (
-                    <button
-                      onClick={handleCommentsClick}
-                      className="flex items-center gap-1 text-blue-600 hover:text-blue-800 transition-colors"
-                    >
+                  {/* Comments Icon - Solo ícono, sin contador */}
+                  <button
+                    onClick={handleCommentsClick}
+                    className="flex items-center gap-1.5 text-blue-600 hover:text-blue-800 transition-colors group/comment"
+                  >
+                    <div className="w-6 h-6 rounded bg-blue-50 flex items-center justify-center group-hover/comment:bg-blue-100 transition-colors">
                       <svg
-                        className="w-4 h-4"
+                        className="w-3.5 h-3.5"
                         fill="none"
                         stroke="currentColor"
                         viewBox="0 0 24 24"
@@ -276,17 +333,14 @@ export const TaskCard = memo(
                           d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
                         />
                       </svg>
-                      <span className="font-medium">
-                        {commentCount} comentario{commentCount !== 1 ? "s" : ""}
-                      </span>
-                    </button>
-                  )}
+                    </div>
+                  </button>
                 </div>
               </div>
             </div>
 
-            {/* Action Buttons */}
-            <div className="pt-4 border-t border-gray-100">
+            {/* Enhanced Action Buttons */}
+            <div className="pt-3 border-t border-lines-light">
               {/* Desktop Layout */}
               <div className="hidden sm:flex sm:items-center sm:justify-between">
                 {/* Left Group - Primary Actions */}
@@ -295,10 +349,10 @@ export const TaskCard = memo(
                     variant="secondary"
                     onClick={handleCommentsClick}
                     disabled={isLoading}
-                    className="text-gray-600 hover:text-blue-600 text-body-l px-4 py-2"
+                    className="btn-secondary group/btn text-body-m px-3 py-1.5"
                   >
                     <svg
-                      className="w-4 h-4 mr-2"
+                      className="w-4 h-4 mr-1.5 group-hover/btn:scale-110 transition-transform"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -310,7 +364,7 @@ export const TaskCard = memo(
                         d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
                       />
                     </svg>
-                    Comentarios
+                    <span>Comentarios</span>
                   </Button>
 
                   {!task.parentTask && (
@@ -318,10 +372,10 @@ export const TaskCard = memo(
                       variant="secondary"
                       onClick={handleAddSubtask}
                       disabled={isLoading}
-                      className="text-gray-600 hover:text-purple-600 text-body-l px-4 py-2"
+                      className="btn-secondary group/btn text-body-m px-3 py-1.5"
                     >
                       <svg
-                        className="w-4 h-4 mr-2"
+                        className="w-4 h-4 mr-1.5 group-hover/btn:scale-110 transition-transform"
                         fill="none"
                         stroke="currentColor"
                         viewBox="0 0 24 24"
@@ -333,7 +387,7 @@ export const TaskCard = memo(
                           d="M12 6v6m0 0v6m0-6h6m-6 0H6"
                         />
                       </svg>
-                      Subtarea
+                      <span>Subtarea</span>
                     </Button>
                   )}
                 </div>
@@ -344,10 +398,10 @@ export const TaskCard = memo(
                     variant="secondary"
                     onClick={handleEdit}
                     disabled={isLoading}
-                    className="text-gray-600 hover:text-blue-600 text-body-l px-4 py-2"
+                    className="btn-secondary group/btn text-body-m px-3 py-1.5"
                   >
                     <svg
-                      className="w-4 h-4 mr-2"
+                      className="w-4 h-4 mr-1.5 group-hover/btn:scale-110 transition-transform"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -359,17 +413,17 @@ export const TaskCard = memo(
                         d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
                       />
                     </svg>
-                    Editar
+                    <span>Editar</span>
                   </Button>
 
                   <Button
-                    variant="secondary"
+                    variant="destructive"
                     onClick={handleDelete}
                     disabled={isLoading}
-                    className="text-gray-600 hover:text-red-600 text-body-l px-4 py-2"
+                    className="btn-destructive group/btn text-body-m px-3 py-1.5"
                   >
                     <svg
-                      className="w-4 h-4 mr-2"
+                      className="w-4 h-4 mr-1.5 group-hover/btn:scale-110 transition-transform"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -381,21 +435,21 @@ export const TaskCard = memo(
                         d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
                       />
                     </svg>
-                    Eliminar
+                    <span>Eliminar</span>
                   </Button>
                 </div>
               </div>
 
-              {/* Mobile Layout */}
-              <div className="flex sm:hidden gap-2">
+              {/* Mobile Layout - Enhanced */}
+              <div className="flex sm:hidden gap-1.5">
                 <Button
                   variant="secondary"
                   onClick={handleCommentsClick}
                   disabled={isLoading}
-                  className="text-gray-600 hover:text-blue-600 flex-1 px-3 py-2.5"
+                  className="btn-secondary flex-1 flex items-center justify-center px-2 py-2"
                 >
                   <svg
-                    className="w-5 h-5"
+                    className="w-4 h-4"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -414,10 +468,10 @@ export const TaskCard = memo(
                     variant="secondary"
                     onClick={handleAddSubtask}
                     disabled={isLoading}
-                    className="text-gray-600 hover:text-purple-600 flex-1 px-3 py-2.5"
+                    className="btn-secondary flex-1 flex items-center justify-center px-2 py-2"
                   >
                     <svg
-                      className="w-5 h-5"
+                      className="w-4 h-4"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -436,10 +490,10 @@ export const TaskCard = memo(
                   variant="secondary"
                   onClick={handleEdit}
                   disabled={isLoading}
-                  className="text-gray-600 hover:text-blue-600 flex-1 px-3 py-2.5"
+                  className="btn-secondary flex-1 flex items-center justify-center px-2 py-2"
                 >
                   <svg
-                    className="w-5 h-5"
+                    className="w-4 h-4"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -454,13 +508,13 @@ export const TaskCard = memo(
                 </Button>
 
                 <Button
-                  variant="secondary"
+                  variant="destructive"
                   onClick={handleDelete}
                   disabled={isLoading}
-                  className="text-gray-600 hover:text-red-600 flex-1 px-3 py-2.5"
+                  className="btn-destructive flex-1 flex items-center justify-center px-2 py-2"
                 >
                   <svg
-                    className="w-5 h-5"
+                    className="w-4 h-4"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -478,7 +532,7 @@ export const TaskCard = memo(
           </div>
         </div>
 
-        {/* Delete Confirmation Modal */}
+        {/* Enhanced Delete Confirmation Modal */}
         <Modal
           isOpen={showDeleteModal}
           onClose={handleCloseDeleteModal}
@@ -496,32 +550,59 @@ export const TaskCard = memo(
             },
           }}
         >
-          <div className="space-y-3">
-            <p className="text-body-l text-gray-700">
-              ¿Estás seguro que deseas eliminar la tarea &quot;
-              <strong>{task.title}</strong>&quot;?
-            </p>
+          <div className="space-y-4">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center flex-shrink-0">
+                <svg
+                  className="w-5 h-5 text-red-500"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
+                  />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <h4 className="text-heading-s font-medium text-text-primary mb-2">
+                  ¿Estás completamente seguro?
+                </h4>
+                <p className="text-body-l text-text-secondary">
+                  Vas a eliminar la tarea{" "}
+                  <strong className="text-text-primary">
+                    &quot;{task.title}&quot;
+                  </strong>{" "}
+                  permanentemente.
+                </p>
+              </div>
+            </div>
 
-            {/* Advertencia de subtareas */}
+            {/* Enhanced Subtask Warning */}
             {task.subtaskCount !== undefined && task.subtaskCount > 0 && (
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-                <div className="flex items-start">
-                  <svg
-                    className="h-5 w-5 text-yellow-400 mt-0.5 mr-2"
-                    fill="currentColor"
-                    viewBox="0 0 20 20"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
+              <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-yellow-100 flex items-center justify-center flex-shrink-0">
+                    <svg
+                      className="w-4 h-4 text-yellow-600"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                  </div>
                   <div className="flex-1">
-                    <h4 className="text-body-l text-yellow-800 font-medium">
-                      Esta acción eliminará subtareas
+                    <h4 className="text-body-l font-medium text-yellow-800 mb-1">
+                      ⚠️ Esta acción eliminará subtareas
                     </h4>
-                    <p className="text-body-l text-yellow-700 mt-1">
+                    <p className="text-body-m text-yellow-700">
                       Esta tarea tiene{" "}
                       <strong>
                         {task.subtaskCount} subtarea
@@ -538,17 +619,32 @@ export const TaskCard = memo(
               </div>
             )}
 
-            <p className="text-body-m text-gray-500">
-              Esta acción no se puede deshacer.
-            </p>
+            <div className="bg-gray-50 rounded-lg p-3">
+              <p className="text-body-m text-text-secondary flex items-center gap-2">
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+                Esta acción no se puede deshacer.
+              </p>
+            </div>
           </div>
         </Modal>
 
-        {/* Comments Modal */}
+        {/* Enhanced Comments Modal */}
         <Modal
           isOpen={showCommentsModal}
           onClose={handleCloseCommentsModal}
-          title="Comentarios"
+          title={`💬 Comentarios - ${task.title}`}
           maxWidth="lg"
         >
           {showCommentsModal && task._id && (
@@ -560,8 +656,23 @@ export const TaskCard = memo(
           )}
 
           {showCommentsModal && !task._id && (
-            <div className="text-red-500 p-4 text-body-l">
-              Error: No se pudo obtener el ID de la tarea
+            <div className="flex items-center gap-3 text-red-600 p-6 bg-red-50 rounded-lg">
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+              <span className="text-body-l font-medium">
+                Error: No se pudo obtener el ID de la tarea
+              </span>
             </div>
           )}
         </Modal>
